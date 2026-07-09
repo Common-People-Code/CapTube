@@ -49,6 +49,7 @@ pub mod web_api;
 mod window_exclusion;
 mod window_position_persistence;
 mod windows;
+mod youtube;
 
 use audio::AppSounds;
 use auth::{AuthStore, Plan};
@@ -4969,6 +4970,14 @@ pub async fn run(recording_logging_handle: LoggingHandle, logs_dir: PathBuf) {
             updates::updates_check,
             updates::updates_download_and_install,
             updates::updates_channel_changed,
+            youtube::youtube_get_status,
+            youtube::youtube_set_credentials,
+            youtube::youtube_connect,
+            youtube::youtube_disconnect,
+            youtube::youtube_list_channels,
+            youtube::youtube_set_channel,
+            youtube::youtube_set_preferences,
+            youtube::youtube_upload_recording,
         ])
         .events(tauri_specta::collect_events![
             RecordingOptionsChanged,
@@ -5023,7 +5032,8 @@ pub async fn run(recording_logging_handle: LoggingHandle, logs_dir: PathBuf) {
         .typ::<cap_automation::ClipboardSource>()
         .typ::<cap_automation::ExportFormat>()
         .typ::<cap_automation::AutomationExportCompression>()
-        .typ::<cap_automation::ExportDestination>();
+        .typ::<cap_automation::ExportDestination>()
+        .typ::<youtube::YouTubeStore>();
 
     #[cfg(debug_assertions)]
     {

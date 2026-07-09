@@ -14,6 +14,8 @@ pub enum NotificationType {
     ScreenshotCopiedToClipboard,
     ScreenshotSaveFailed,
     ScreenshotCopyFailed,
+    YouTubeUploadComplete,
+    YouTubeUploadFailed,
 }
 
 impl NotificationType {
@@ -60,6 +62,16 @@ impl NotificationType {
             NotificationType::ScreenshotCopyFailed => (
                 "Copy Failed",
                 "Unable to copy screenshot to clipboard. Please try again",
+                true,
+            ),
+            NotificationType::YouTubeUploadComplete => (
+                "Uploaded to YouTube",
+                "Unlisted link copied to clipboard",
+                false,
+            ),
+            NotificationType::YouTubeUploadFailed => (
+                "YouTube Upload Failed",
+                "Unable to upload video to YouTube. Please try again",
                 true,
             ),
         }

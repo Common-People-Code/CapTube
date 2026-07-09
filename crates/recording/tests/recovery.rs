@@ -121,6 +121,7 @@ impl TestRecording {
             project_path: project_path.to_path_buf(),
             pretty_name: "Test Recording".to_string(),
             sharing: None,
+            youtube: None,
             upload: None,
             inner: RecordingMetaInner::Studio(Box::new(StudioRecordingMeta::MultipleSegments {
                 inner: MultipleSegments {

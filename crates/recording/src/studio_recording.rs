@@ -1774,6 +1774,7 @@ fn persist_final_recording_meta(recording_dir: &Path, studio_meta: &StudioRecord
         project_path: recording_dir.to_path_buf(),
         pretty_name,
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(studio_meta.clone())),
         upload: None,
     };
@@ -1797,6 +1798,7 @@ fn write_in_progress_meta(recording_dir: &Path) -> anyhow::Result<()> {
         project_path: recording_dir.to_path_buf(),
         pretty_name,
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(StudioRecordingMeta::MultipleSegments {
             inner: MultipleSegments {
                 segments: Vec::new(),
