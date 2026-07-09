@@ -1722,6 +1722,7 @@ pub async fn start_recording(
             }
         },
         sharing: None,
+        youtube: None,
         upload: None,
     };
 
@@ -2900,6 +2901,7 @@ pub async fn take_screenshot(
         project_path: project_file_path.clone(),
         pretty_name: project_name,
         sharing: None,
+        youtube: None,
         inner: cap_project::RecordingMetaInner::Studio(Box::new(
             cap_project::StudioRecordingMeta::SingleSegment { segment },
         )),
@@ -3726,6 +3728,7 @@ pub fn generate_zoom_segments_from_clicks(
         project_path: recording.project_path.clone(),
         pretty_name: String::new(),
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(recording.meta.clone())),
         upload: None,
     };

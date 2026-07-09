@@ -1022,6 +1022,7 @@ fn persist_instant_recording_meta(
         project_path: recording.project_path.clone(),
         pretty_name,
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Instant(meta),
         upload: None,
     }

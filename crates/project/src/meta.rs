@@ -68,6 +68,16 @@ pub struct SharingMeta {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct YouTubeSharingMeta {
+    pub video_id: String,
+    pub url: String,
+    pub privacy: String,
+    #[specta(type = f64)]
+    pub uploaded_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub enum Platform {
     MacOS,
     Windows,
@@ -96,6 +106,8 @@ pub struct RecordingMeta {
     pub pretty_name: String,
     #[serde(default)]
     pub sharing: Option<SharingMeta>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub youtube: Option<YouTubeSharingMeta>,
     #[serde(flatten)]
     pub inner: RecordingMetaInner,
     #[serde(default, skip_serializing_if = "Option::is_none")]

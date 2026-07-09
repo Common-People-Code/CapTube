@@ -248,6 +248,7 @@ impl ScreenshotEditorInstances {
                 project_path: path.parent().unwrap().to_path_buf(),
                 pretty_name: "Screenshot".to_string(),
                 sharing: None,
+                youtube: None,
                 inner: RecordingMetaInner::Studio(Box::new(studio_meta.clone())),
                 upload: None,
             }
@@ -823,6 +824,7 @@ pub async fn prewarm_screenshot_renderer() {
         project_path: std::env::temp_dir(),
         pretty_name: "Prewarm".to_string(),
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(studio_meta.clone())),
         upload: None,
     };
@@ -1532,6 +1534,7 @@ pub async fn render_screenshot_png(instance: &ScreenshotEditorInstance) -> Resul
             project_path: path.parent().unwrap_or(&path).to_path_buf(),
             pretty_name: "Screenshot".to_string(),
             sharing: None,
+            youtube: None,
             inner: RecordingMetaInner::Studio(Box::new(studio_meta)),
             upload: None,
         }

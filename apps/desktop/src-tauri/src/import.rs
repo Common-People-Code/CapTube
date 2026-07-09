@@ -1407,6 +1407,7 @@ pub async fn start_video_import(app: AppHandle, source_path: PathBuf) -> Result<
         project_path: project_path.clone(),
         pretty_name: project_name.clone(),
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(StudioRecordingMeta::MultipleSegments {
             inner: MultipleSegments {
                 segments: vec![MultipleSegment {
@@ -1499,6 +1500,7 @@ pub async fn start_video_import(app: AppHandle, source_path: PathBuf) -> Result<
                     project_path: project_path.clone(),
                     pretty_name: project_name,
                     sharing: None,
+                    youtube: None,
                     inner: RecordingMetaInner::Studio(Box::new(
                         StudioRecordingMeta::MultipleSegments {
                             inner: MultipleSegments {
@@ -1984,6 +1986,7 @@ pub async fn start_image_import(app: AppHandle, source_path: PathBuf) -> Result<
         project_path: project_path.clone(),
         pretty_name: project_name,
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(StudioRecordingMeta::SingleSegment { segment })),
         upload: None,
     };

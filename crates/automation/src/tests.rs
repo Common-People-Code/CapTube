@@ -69,6 +69,16 @@ impl AutomationHost for MockHost {
         Ok(())
     }
 
+    async fn upload_to_youtube(
+        &self,
+        _ctx: &TriggerContext,
+        privacy: &str,
+        _copy: bool,
+    ) -> Result<(), String> {
+        self.record(&format!("upload_to_youtube:{privacy}"));
+        Ok(())
+    }
+
     async fn reveal_in_file_manager(&self, _ctx: &TriggerContext) -> Result<(), String> {
         self.record("reveal");
         Ok(())

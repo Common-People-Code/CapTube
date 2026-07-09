@@ -8,6 +8,7 @@ import type {
 	HotkeysStore,
 	PresetsStore,
 	RecordingSettingsStore,
+	YouTubeStore,
 } from "~/utils/tauri";
 
 export type UserProfileStore = {
@@ -77,6 +78,7 @@ export const authStore = declareStore<AuthStore>("auth");
 export const automationsStore = declareStore<AutomationsStore>("automations");
 export const userProfileStore = declareStore<UserProfileStore>("user_profile");
 export const hotkeysStore = declareStore<HotkeysStore>("hotkeys");
+export const youtubeStore = declareStore<YouTubeStore>("youtube");
 export const generalSettingsStore =
 	declareStore<GeneralSettingsStore>("general_settings");
 export const recordingSettingsStore = declareStore<RecordingSettingsStore>(

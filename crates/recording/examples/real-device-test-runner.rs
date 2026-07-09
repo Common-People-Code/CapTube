@@ -1453,6 +1453,7 @@ async fn execute_recording(
         project_path: recording_dir.clone(),
         pretty_name,
         sharing: None,
+        youtube: None,
         inner: RecordingMetaInner::Studio(Box::new(completed.meta)),
         upload: None,
     };

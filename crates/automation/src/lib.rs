@@ -98,6 +98,7 @@ pub enum Capability {
     SaveToLocation,
     Export,
     Upload,
+    UploadToYouTube,
     RevealInFileManager,
     OpenFile,
     RunCommand,
@@ -119,6 +120,7 @@ impl Action {
             Action::SaveToLocation { .. } => Capability::SaveToLocation,
             Action::Export { .. } => Capability::Export,
             Action::Upload { .. } => Capability::Upload,
+            Action::UploadToYouTube { .. } => Capability::UploadToYouTube,
             Action::RevealInFileManager => Capability::RevealInFileManager,
             Action::OpenFile => Capability::OpenFile,
             Action::RunCommand { .. } => Capability::RunCommand,
@@ -206,6 +208,13 @@ pub trait AutomationHost: Send + Sync {
         organization_id: Option<&str>,
         copy_link: bool,
         open_in_browser: bool,
+    ) -> impl std::future::Future<Output = Result<(), String>> + Send;
+
+    fn upload_to_youtube(
+        &self,
+        ctx: &TriggerContext,
+        privacy: &str,
+        copy_link: bool,
     ) -> impl std::future::Future<Output = Result<(), String>> + Send;
 
     fn reveal_in_file_manager(
@@ -382,6 +391,9 @@ async fn execute_action<H: AutomationHost>(
                 *open_in_browser,
             )
             .await
+        }
+        Action::UploadToYouTube { privacy, copy_link } => {
+            host.upload_to_youtube(ctx, privacy, *copy_link).await
         }
         Action::RevealInFileManager => host.reveal_in_file_manager(ctx).await,
         Action::OpenFile => host.open_file(ctx).await,

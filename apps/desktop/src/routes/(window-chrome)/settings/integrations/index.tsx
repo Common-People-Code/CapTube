@@ -44,6 +44,21 @@ const GoogleDriveIcon = (props: { class?: string }) => (
 	</svg>
 );
 
+const YouTubeIcon = (props: { class?: string }) => (
+	<svg
+		class={props.class}
+		viewBox="0 0 24 24"
+		xmlns="http://www.w3.org/2000/svg"
+		aria-hidden="true"
+	>
+		<path
+			d="M23.5 6.2a3 3 0 0 0-2.11-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.39.53A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.11 2.12c1.89.53 9.39.53 9.39.53s7.5 0 9.39-.53a3 3 0 0 0 2.11-2.12A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8Z"
+			fill="#FF0000"
+		/>
+		<path d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6Z" fill="#fff" />
+	</svg>
+);
+
 export default function AppsTab() {
 	const navigate = useNavigate();
 	const auth = authStore.createQuery();
@@ -97,11 +112,19 @@ export default function AppsTab() {
 			url: "/settings/integrations/s3-config",
 			pro: true,
 		},
+		{
+			name: "YouTube",
+			description:
+				"Upload finished recordings straight to your own YouTube channel as unlisted videos, then get the shareable link copied to your clipboard. Uses your own Google API credentials — no Cap account required.",
+			icon: YouTubeIcon,
+			url: "/settings/integrations/youtube-config",
+			pro: false,
+		},
 	];
 
 	const handleAppClick = async (app: (typeof apps)[number]) => {
 		try {
-			if (managedByOrganization()) return;
+			if (app.pro && managedByOrganization()) return;
 			if (app.pro && !isPro()) {
 				await commands.showWindow("Upgrade");
 				return;
@@ -131,10 +154,10 @@ export default function AppsTab() {
 										<Button
 											size="sm"
 											variant="primary"
-											disabled={!!managedByOrganization()}
+											disabled={app.pro && !!managedByOrganization()}
 											onClick={() => handleAppClick(app)}
 										>
-											{managedByOrganization()
+											{app.pro && managedByOrganization()
 												? "Managed by your organization"
 												: app.pro && !isPro()
 													? "Upgrade to Pro"
