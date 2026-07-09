@@ -483,6 +483,35 @@ async updatesDownloadAndInstall() : Promise<null> {
 },
 async updatesChannelChanged() : Promise<null> {
     return await TAURI_INVOKE("updates_channel_changed");
+},
+async youtubeGetStatus() : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_get_status");
+},
+async youtubeSetCredentials(clientId: string, clientSecret: string) : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_set_credentials", { clientId, clientSecret });
+},
+async youtubeConnect() : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_connect");
+},
+async youtubeDisconnect() : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_disconnect");
+},
+async youtubeListChannels() : Promise<YouTubeChannel[]> {
+    return await TAURI_INVOKE("youtube_list_channels");
+},
+async youtubeSetChannel(channelId: string, channelTitle: string) : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_set_channel", { channelId, channelTitle });
+},
+async youtubeSetPreferences(autoUpload: boolean, defaultPrivacy: YouTubePrivacy) : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_set_preferences", { autoUpload, defaultPrivacy });
+},
+/**
+ * Uploads the finished mp4 for a recording project to YouTube. The caller is expected to have
+ * rendered the video first (studio recordings only have an output file after export); this mirrors
+ * the cap.so `upload_exported_video` contract.
+ */
+async youtubeUploadRecording(projectPath: string, progress: TAURI_CHANNEL<UploadProgress>) : Promise<YouTubeSharingMeta> {
+    return await TAURI_INVOKE("youtube_upload_recording", { projectPath, progress });
 }
 }
 
@@ -855,8 +884,8 @@ export type RecordingAction = "Started" | "InvalidAuthentication" | "UpgradeRequ
 export type RecordingDeleted = { path: string }
 export type RecordingEvent = { variant: "Countdown"; value: number } | { variant: "Started" } | { variant: "Stopped" } | { variant: "Paused" } | { variant: "Resumed" } | { variant: "Failed"; error: string } | { variant: "StartFailed"; error: string } | { variant: "InputLost"; input: RecordingInputKind } | { variant: "InputRestored"; input: RecordingInputKind } | { variant: "Degraded"; reason: string } | { variant: "Recovered" }
 export type RecordingInputKind = "microphone" | "camera"
-export type RecordingMeta = (StudioRecordingMeta | InstantRecordingMeta) & { platform?: Platform | null; pretty_name: string; sharing?: SharingMeta | null; upload?: UploadMeta | null }
-export type RecordingMetaWithMetadata = ((StudioRecordingMeta | InstantRecordingMeta) & { platform?: Platform | null; pretty_name: string; sharing?: SharingMeta | null; upload?: UploadMeta | null }) & { mode: RecordingMode; status: StudioRecordingStatus; clip_count: number }
+export type RecordingMeta = (StudioRecordingMeta | InstantRecordingMeta) & { platform?: Platform | null; pretty_name: string; sharing?: SharingMeta | null; youtube?: YouTubeSharingMeta | null; upload?: UploadMeta | null }
+export type RecordingMetaWithMetadata = ((StudioRecordingMeta | InstantRecordingMeta) & { platform?: Platform | null; pretty_name: string; sharing?: SharingMeta | null; youtube?: YouTubeSharingMeta | null; upload?: UploadMeta | null }) & { mode: RecordingMode; status: StudioRecordingStatus; clip_count: number }
 export type RecordingMode = "studio" | "instant" | "screenshot"
 export type RecordingOptionsChanged = null
 export type RecordingSettingsStore = { target: ScreenCaptureTarget | null; micName: string | null; cameraId: DeviceOrModelID | null; mode: RecordingMode | null; systemAudio: boolean; organizationId: string | null; cameraDeviceSettings: { [key in string]: CameraDeviceSettings }; microphoneDeviceSettings: { [key in string]: MicrophoneDeviceSettings } }
@@ -931,6 +960,12 @@ export type WindowId = string
 export type WindowPosition = { x: number; y: number; displayId?: DisplayId | null }
 export type WindowUnderCursor = { id: WindowId; app_name: string; bounds: LogicalBounds }
 export type XY<T> = { x: T; y: T }
+export type YouTubeChannel = { id: string; title: string; thumbnailUrl?: string | null }
+export type YouTubeError = { type: "MissingCredentials" } | { type: "NotConnected" } | { type: "OAuthCancelled" } | { type: "NeedsReconnect" } | { type: "Oauth"; message: string } | { type: "TokenExchange"; message: string } | { type: "QuotaExceeded" } | { type: "FileNotFound" } | { type: "Api"; message: { code: number; message: string } } | { type: "Http"; message: string } | { type: "Store"; message: string }
+export type YouTubePrivacy = "unlisted" | "private" | "public"
+export type YouTubeSharingMeta = { videoId: string; url: string; privacy: string; uploadedAt: number }
+export type YouTubeStatus = { connected: boolean; hasCredentials: boolean; channelId: string | null; channelTitle: string | null; autoUpload: boolean; defaultPrivacy: YouTubePrivacy }
+export type YouTubeStore = { clientId?: string | null; clientSecret?: string | null; refreshToken?: string | null; accessToken?: string | null; accessTokenExpiresAt?: number | null; channelId?: string | null; channelTitle?: string | null; autoUpload?: boolean; defaultPrivacy?: YouTubePrivacy }
 export type ZoomMode = "auto" | { manual: { x: number; y: number } }
 export type ZoomSegment = { start: number; end: number; amount: number; mode: ZoomMode; glideDirection?: GlideDirection; glideSpeed?: number; instantAnimation?: boolean; edgeSnapRatio?: number }
 

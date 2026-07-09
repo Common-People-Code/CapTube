@@ -73,6 +73,7 @@ pub struct YouTubeSharingMeta {
     pub video_id: String,
     pub url: String,
     pub privacy: String,
+    #[specta(type = f64)]
     pub uploaded_at: i64,
 }
 

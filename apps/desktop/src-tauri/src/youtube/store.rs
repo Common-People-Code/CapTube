@@ -35,6 +35,7 @@ pub struct YouTubeStore {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub access_token: Option<String>,
     #[serde(default)]
+    #[specta(type = Option<f64>)]
     pub access_token_expires_at: Option<i64>,
     #[serde(default)]
     pub channel_id: Option<String>,

@@ -24,6 +24,7 @@ import OrganizationDropdown from "./OrganizationDropdown";
 import PresetsDropdown from "./PresetsDropdown";
 import ShareButton from "./ShareButton";
 import { EditorButton } from "./ui";
+import YouTubeUploadButton from "./YouTubeUploadButton";
 
 export type ResolutionOption = {
 	label: string;
@@ -167,6 +168,7 @@ export function Header() {
 					leftIcon={<IconCapRedo class="w-5" />}
 				/>
 				<div data-tauri-drag-region class="flex-1 h-full" />
+				<YouTubeUploadButton />
 				<Show when={customDomain.data}>
 					<ShareButton />
 				</Show>
