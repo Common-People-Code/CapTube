@@ -2,12 +2,62 @@
 
 Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEMPLATE.md` for the entry format, and `CLAUDE.md` for current status.
 
-**Current Phase:** Phase 2 — Auto-upload on completion
-**Sessions completed:** 1
+**Current Phase:** Phase 3 — Notification action button
+**Sessions completed:** 2
 
 ---
 
 *Add new entries above this line*
+
+---
+
+## Session 2 — 2026-07-09
+
+### What We Accomplished
+- Opened **PR #1** for Phase 1.
+- Added session-tracking docs (`CLAUDE.md`, `SESSION_LOG.md`, `SESSION_LOG_TEMPLATE.md`).
+- Built **Phase 2 — auto-upload on completion** (compile/typecheck/lint verified, 21 automation tests pass):
+  - `Action::UploadToYouTube { privacy, copyLink }` + `Capability::UploadToYouTube` in `crates/automation` (types.rs, lib.rs: `required_capability`, dispatch, `AutomationHost::upload_to_youtube`).
+  - Implemented on `DesktopAutomationHost` — renders studio recordings first (default 1080p/web profile), then calls the shared `youtube::upload_project`. MockHost + CLI host updated (CLI reports it desktop-only).
+  - Refactored `youtube_upload_recording` into a shared `pub async fn upload_project(app, path, privacy_override, copy_link, progress)` used by both the manual command and the automation host.
+  - Frontend: `uploadToYouTube` in all `automations.ts`/`automations.tsx` action maps; auto-upload toggle in `youtube-config.tsx` that manages a pair of automation rules via `setYouTubeAutoUpload`.
+  - Regenerated `tauri.ts` (restored macOS-only types after the Linux regen, as in Session 1).
+
+### Technical Decisions Made
+
+**Two managed rules, not one**
+- What: The auto-upload toggle writes two rules (`youtube-auto-upload-studioRecordingFinished` and `-instantRecordingFinished`).
+- Why: An `AutomationRule` has a single `trigger`; both finished-recording triggers must be covered.
+- Alternatives considered: a multi-trigger rule (not supported by the schema).
+
+**Shared `upload_project` instead of duplicating upload logic**
+- What: Extracted the manual command's body into a reusable function taking a privacy override + copy-link flag.
+- Why: The automation host and the manual command need identical upload+persist+notify behavior; one code path avoids drift.
+
+**Studio render lives in the host, not the youtube module**
+- What: `DesktopAutomationHost::upload_to_youtube` renders via the existing `export` path when `output_path()` is missing.
+- Why: Keeps the `youtube` module free of the `cap_export` dependency; reuses the host's proven render path.
+
+### Files Created / Modified
+- `crates/automation/src/{types,lib,tests}.rs` — action/capability/trait/dispatch + MockHost.
+- `apps/desktop/src-tauri/src/automation.rs` — host impl + `default_youtube_export_profile`.
+- `apps/desktop/src-tauri/src/youtube/{mod,store}.rs` — `upload_project`, `YouTubePrivacy::from_api_value`.
+- `apps/cli/src/automation.rs` — CLI host stub (desktop-only error).
+- `apps/desktop/src/utils/automations.ts` — labels/context + `get/setYouTubeAutoUpload`.
+- `apps/desktop/src/routes/(window-chrome)/settings/automations.tsx` — action label maps.
+- `apps/desktop/src/routes/(window-chrome)/settings/integrations/youtube-config.tsx` — auto-upload toggle.
+- `apps/desktop/src/utils/tauri.ts` — regenerated (`Action` now has `uploadToYouTube`).
+
+### Blockers / Issues
+- Outstanding: still no live end-to-end run (no GUI in the build env). Phases 1 & 2 are compile/typecheck/lint-verified only.
+
+### Next Session Should
+- [ ] Phase 3: notification "Copy link" action button (thread the URL through `NotificationType`, register a notification-action listener).
+- [ ] Dogfood live with a real Google project; confirm studio auto-render + upload path end-to-end.
+
+### Notes
+- The raw "Upload to YouTube" automation action shows in the Automations tab with default privacy/copyLink; the primary UX is the settings toggle.
+- Auto-upload rules are keyed by a stable id prefix (`youtube-auto-upload-…`) so the toggle can find and remove them idempotently.
 
 ---
 

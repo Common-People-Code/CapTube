@@ -12,8 +12,8 @@ CapTube is a fork of [Cap](https://cap.so) — an open-source, privacy-first scr
 
 The defining constraint: the YouTube feature is **fully self-contained** — it does not depend on cap.so's web service, account, or pricing, and the distributed binary ships **no credentials**. Each user brings their own Google OAuth client (BYOK).
 
-**Current Phase:** Phase 2 — Auto-upload on recording completion (via the automation engine)
-**Current Focus:** Wiring `Action::UploadToYouTube` into `crates/automation` + a settings toggle that manages the rule.
+**Current Phase:** Phase 3 — Notification "Copy link" action button (pending)
+**Current Focus:** Phases 1 & 2 complete (PR #1). Next: a real action button on the upload notification, plus a live dogfood pass.
 
 ---
 
@@ -76,21 +76,17 @@ Follow `AGENTS.md` exactly. Highlights that bit us / matter most for this featur
 
 ## Current Status
 
-**What's working (Phase 1 — PR #1):**
+**What's working (Phases 1 & 2 — PR #1):**
 - BYOK Google OAuth (PKCE + loopback), token refresh/revoke.
 - Channel listing + resumable unlisted upload to the YouTube Data API.
 - `RecordingMeta.youtube` persistence; clipboard copy + native notification.
 - Integrations settings page (setup wizard, connect, channel picker, default privacy).
 - Manual "Upload to YouTube" button in the editor header.
+- **Auto-upload on completion**: `Action::UploadToYouTube` + `Capability` in `crates/automation`, implemented on `DesktopAutomationHost` (renders studio first via the shared `youtube::upload_project`). Settings toggle manages a pair of automation rules (studio + instant finished).
 
-**In progress (Phase 2):**
-- `Action::UploadToYouTube` in `crates/automation` (+ `Capability`, host impl in `automation.rs`).
-- Settings toggle → single managed automation rule on `studioRecordingFinished` / `instantRecordingFinished`.
-
-**Next up:**
-1. Phase 2: automation action + auto-upload toggle.
-2. Phase 3: real "Copy link" action button on the notification.
-3. Live end-to-end test against a real Google project.
+**Next up (Phase 3):**
+1. Real "Copy link" action button on the upload notification (extend `notifications.rs` + a notification-action listener).
+2. Live end-to-end test against a real Google project (not yet run — no GUI in the build env).
 
 **Blockers / open questions:**
 - The build environment has no GUI, so the OAuth/upload flow has only been compile/typecheck/lint-verified, not run live. Needs a real dogfood pass.
