@@ -39,6 +39,7 @@ impl AutomationHost for DesktopAutomationHost {
             Capability::SaveToLocation,
             Capability::Export,
             Capability::Upload,
+            Capability::UploadToYouTube,
             Capability::RevealInFileManager,
             Capability::OpenFile,
             Capability::RunCommand,
@@ -251,6 +252,44 @@ impl AutomationHost for DesktopAutomationHost {
         }
 
         Ok(())
+    }
+
+    async fn upload_to_youtube(
+        &self,
+        ctx: &TriggerContext,
+        privacy: &str,
+        copy_link: bool,
+    ) -> Result<(), String> {
+        let project_path = ctx
+            .project_path
+            .as_ref()
+            .ok_or("No project path available for YouTube upload")?;
+
+        // Studio recordings have no rendered mp4 until an export runs; render to the project's
+        // default output first so `upload_project` finds the file. Instant recordings already have it.
+        let meta = cap_project::RecordingMeta::load_for_project(project_path)
+            .map_err(|e| format!("Failed to load project: {e}"))?;
+        if !meta.output_path().exists() {
+            info!(project = %project_path.display(), "Automation: rendering before YouTube upload");
+            self.export(
+                ctx,
+                &default_youtube_export_profile(),
+                &ExportDestination::ProjectFolder,
+            )
+            .await?;
+        }
+
+        let channel = tauri::ipc::Channel::new(|_| Ok(()));
+        crate::youtube::upload_project(
+            &self.app,
+            project_path,
+            Some(crate::youtube::YouTubePrivacy::from_api_value(privacy)),
+            copy_link,
+            &channel,
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("{e}"))
     }
 
     async fn reveal_in_file_manager(&self, ctx: &TriggerContext) -> Result<(), String> {
@@ -546,6 +585,16 @@ fn reveal_path(path: &Path) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn default_youtube_export_profile() -> ExportProfile {
+    ExportProfile {
+        format: ExportFormat::Mp4,
+        fps: 30,
+        resolution_base: cap_project::XY { x: 1920, y: 1080 },
+        compression: Some(AutomationExportCompression::Web),
+        preset_name: None,
+    }
 }
 
 fn build_desktop_export_settings(profile: &ExportProfile) -> crate::export::ExportSettings {

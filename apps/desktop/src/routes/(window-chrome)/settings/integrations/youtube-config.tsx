@@ -4,11 +4,20 @@ import { useMutation } from "@tanstack/solid-query";
 import { createResource, createSignal, For, Show, Suspense } from "solid-js";
 import { Input } from "~/routes/editor/ui";
 import {
+	getYouTubeAutoUpload,
+	setYouTubeAutoUpload,
+} from "~/utils/automations";
+import {
 	commands,
 	type YouTubeChannel,
 	type YouTubePrivacy,
 } from "~/utils/tauri";
-import { Section, SectionCard, SettingsPageContent } from "../Setting";
+import {
+	Section,
+	SectionCard,
+	SettingsPageContent,
+	ToggleSettingItem,
+} from "../Setting";
 import { IntegrationConfigHeader } from "./config-header";
 
 const CONSOLE_URL = "https://console.cloud.google.com/apis/credentials";
@@ -86,16 +95,33 @@ export default function YouTubeConfigPage() {
 		onError: (error) => commands.globalMessageDialog(formatError(error)),
 	}));
 
-	const setPreferences = useMutation(() => ({
-		mutationFn: async (input: {
-			autoUpload: boolean;
-			defaultPrivacy: YouTubePrivacy;
-		}) => {
+	const [autoUpload, { mutate: setAutoUploadState }] = createResource(
+		() => (connected() ? "connected" : null),
+		() => getYouTubeAutoUpload(),
+	);
+
+	const changePrivacy = useMutation(() => ({
+		mutationFn: async (privacy: YouTubePrivacy) => {
 			const next = await commands.youtubeSetPreferences(
-				input.autoUpload,
-				input.defaultPrivacy,
+				autoUpload() ?? false,
+				privacy,
 			);
 			setStatus(next);
+			// Keep the managed auto-upload rules in sync with the chosen privacy.
+			if (autoUpload()) await setYouTubeAutoUpload(true, privacy);
+		},
+		onError: (error) => commands.globalMessageDialog(formatError(error)),
+	}));
+
+	const toggleAutoUpload = useMutation(() => ({
+		mutationFn: async (value: boolean) => {
+			await setYouTubeAutoUpload(value, status()?.defaultPrivacy ?? "unlisted");
+			const next = await commands.youtubeSetPreferences(
+				value,
+				status()?.defaultPrivacy ?? "unlisted",
+			);
+			setStatus(next);
+			setAutoUploadState(value);
 		},
 		onError: (error) => commands.globalMessageDialog(formatError(error)),
 	}));
@@ -300,6 +326,12 @@ export default function YouTubeConfigPage() {
 								description="Control how recordings are sent to YouTube."
 							>
 								<SectionCard padded class="space-y-4">
+									<ToggleSettingItem
+										label="Auto-upload finished recordings"
+										description="Upload every finished studio and instant recording to your selected channel automatically."
+										value={autoUpload() ?? false}
+										onChange={(value) => toggleAutoUpload.mutate(value)}
+									/>
 									<div class="space-y-2">
 										<label class="text-[13px] text-gray-12">
 											Default privacy
@@ -307,13 +339,13 @@ export default function YouTubeConfigPage() {
 										<div class="relative">
 											<select
 												value={status()?.defaultPrivacy ?? "unlisted"}
-												disabled={setPreferences.isPending}
+												disabled={
+													changePrivacy.isPending || toggleAutoUpload.isPending
+												}
 												onChange={(e) =>
-													setPreferences.mutate({
-														autoUpload: status()?.autoUpload ?? false,
-														defaultPrivacy: e.currentTarget
-															.value as YouTubePrivacy,
-													})
+													changePrivacy.mutate(
+														e.currentTarget.value as YouTubePrivacy,
+													)
 												}
 												class="px-3 py-2 pr-10 w-full rounded-lg border border-transparent transition-all duration-200 appearance-none outline-hidden bg-gray-3 focus:border-gray-8 text-gray-12"
 											>

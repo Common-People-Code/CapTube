@@ -211,6 +211,15 @@ impl AutomationHost for CliAutomationHost {
         Ok(())
     }
 
+    async fn upload_to_youtube(
+        &self,
+        _ctx: &TriggerContext,
+        _privacy: &str,
+        _copy_link: bool,
+    ) -> Result<(), String> {
+        Err("YouTube upload is only available from the desktop app".to_string())
+    }
+
     async fn reveal_in_file_manager(&self, ctx: &TriggerContext) -> Result<(), String> {
         let path = ctx
             .image_path

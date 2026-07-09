@@ -21,6 +21,14 @@ impl YouTubePrivacy {
             YouTubePrivacy::Public => "public",
         }
     }
+
+    pub fn from_api_value(value: &str) -> Self {
+        match value {
+            "private" => YouTubePrivacy::Private,
+            "public" => YouTubePrivacy::Public,
+            _ => YouTubePrivacy::Unlisted,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Default)]

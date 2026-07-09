@@ -138,6 +138,13 @@ pub enum Action {
         #[serde(default)]
         body_template: String,
     },
+    #[serde(rename_all = "camelCase")]
+    UploadToYouTube {
+        #[serde(default = "default_unlisted")]
+        privacy: String,
+        #[serde(default = "default_true")]
+        copy_link: bool,
+    },
     OpenEditor,
     SkipEditor,
     ApplyPreset {
@@ -148,6 +155,10 @@ pub enum Action {
 
 fn default_post() -> String {
     "POST".to_string()
+}
+
+fn default_unlisted() -> String {
+    "unlisted".to_string()
 }
 
 fn default_notify_title() -> String {

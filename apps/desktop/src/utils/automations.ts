@@ -69,6 +69,7 @@ export const ACTION_LABELS: Record<ActionType, string> = {
 	webhook: "Send webhook",
 	recognizeTextToClipboard: "Recognize text (OCR) to clipboard",
 	notify: "Show notification",
+	uploadToYouTube: "Upload to YouTube (unlisted)",
 	openEditor: "Open editor",
 	skipEditor: "Skip editor (headless)",
 	applyPreset: "Apply editor preset",
@@ -135,6 +136,7 @@ const ACTION_REQUIRES: Partial<
 	revealInFileManager: ["filePath", "projectPath"],
 	openEditor: ["filePath", "projectPath"],
 	upload: ["filePath", "projectPath"],
+	uploadToYouTube: ["projectPath"],
 };
 
 // `skipEditor` only does anything for the two triggers whose post-capture window is gated on it.
@@ -213,6 +215,8 @@ export function defaultActionForType(type: ActionType): Action {
 			return { type };
 		case "notify":
 			return { type, titleTemplate: "Cap", bodyTemplate: "" };
+		case "uploadToYouTube":
+			return { type, privacy: "unlisted", copyLink: true };
 		case "openEditor":
 			return { type };
 		case "skipEditor":
@@ -259,6 +263,47 @@ export async function getAutomations(): Promise<AutomationsStore> {
 
 export async function setAutomations(store: AutomationsStore): Promise<void> {
 	await commands.setAutomations(store);
+}
+
+// Rules the YouTube settings toggle manages on the user's behalf: one per finished-recording
+// trigger, so enabling the toggle auto-uploads both studio and instant recordings.
+const YOUTUBE_AUTO_RULE_PREFIX = "youtube-auto-upload";
+const YOUTUBE_AUTO_TRIGGERS = [
+	"studioRecordingFinished",
+	"instantRecordingFinished",
+] as const;
+
+export async function getYouTubeAutoUpload(): Promise<boolean> {
+	const store = await getAutomations();
+	return store.rules.some(
+		(rule) => rule.id.startsWith(YOUTUBE_AUTO_RULE_PREFIX) && rule.enabled,
+	);
+}
+
+export async function setYouTubeAutoUpload(
+	enabled: boolean,
+	privacy: string,
+): Promise<void> {
+	const store = await getAutomations();
+	const rules = store.rules.filter(
+		(rule) => !rule.id.startsWith(YOUTUBE_AUTO_RULE_PREFIX),
+	);
+
+	if (enabled) {
+		for (const trigger of YOUTUBE_AUTO_TRIGGERS) {
+			rules.push({
+				id: `${YOUTUBE_AUTO_RULE_PREFIX}-${trigger}`,
+				name: "Auto-upload to YouTube",
+				enabled: true,
+				trigger,
+				matchMode: "all",
+				conditions: [],
+				actions: [{ type: "uploadToYouTube", privacy, copyLink: true }],
+			});
+		}
+	}
+
+	await setAutomations({ ...store, rules });
 }
 
 export async function testAutomation(

@@ -164,17 +164,33 @@ pub async fn youtube_upload_recording(
     project_path: PathBuf,
     progress: Channel<UploadProgress>,
 ) -> Result<YouTubeSharingMeta, YouTubeError> {
-    let store = YouTubeStore::get(&app)
+    upload_project(&app, &project_path, None, true, &progress).await
+}
+
+/// Uploads a project's finished mp4 to YouTube and records the result on `RecordingMeta`. Shared by
+/// the manual command and the automation host. Assumes the mp4 already exists at
+/// `meta.output_path()`; the caller renders studio recordings first.
+pub async fn upload_project(
+    app: &AppHandle,
+    project_path: &std::path::Path,
+    privacy_override: Option<YouTubePrivacy>,
+    copy_link: bool,
+    progress: &Channel<UploadProgress>,
+) -> Result<YouTubeSharingMeta, YouTubeError> {
+    let store = YouTubeStore::get(app)
         .map_err(YouTubeError::Store)?
         .ok_or(YouTubeError::NotConnected)?;
     if !store.is_connected() {
         return Err(YouTubeError::NotConnected);
     }
 
-    let mut meta = RecordingMeta::load_for_project(&project_path)
+    let mut meta = RecordingMeta::load_for_project(project_path)
         .map_err(|e| YouTubeError::Store(e.to_string()))?;
 
     if let Some(existing) = meta.youtube.clone() {
+        if copy_link {
+            copy_to_clipboard(app, &existing.url).await;
+        }
         return Ok(existing);
     }
 
@@ -183,9 +199,9 @@ pub async fn youtube_upload_recording(
         return Err(YouTubeError::FileNotFound);
     }
 
-    let privacy = store.default_privacy.clone();
+    let privacy = privacy_override.unwrap_or_else(|| store.default_privacy.clone());
     let result = api::upload_video(
-        &app,
+        app,
         &file_path,
         api::UploadRequest {
             title: meta.pretty_name.clone(),
@@ -193,7 +209,7 @@ pub async fn youtube_upload_recording(
             privacy: privacy.clone(),
             channel_id: store.channel_id.clone(),
         },
-        &progress,
+        progress,
     )
     .await;
 
@@ -210,19 +226,25 @@ pub async fn youtube_upload_recording(
                 .map_err(|e| error!("Failed to save recording meta: {e}"))
                 .ok();
 
-            let _ = app
-                .state::<ArcLock<ClipboardContext>>()
-                .write()
-                .await
-                .set_text(sharing.url.clone());
+            if copy_link {
+                copy_to_clipboard(app, &sharing.url).await;
+            }
 
-            NotificationType::YouTubeUploadComplete.send(&app);
+            NotificationType::YouTubeUploadComplete.send(app);
             Ok(sharing)
         }
         Err(e) => {
             error!("YouTube upload failed: {e}");
-            NotificationType::YouTubeUploadFailed.send(&app);
+            NotificationType::YouTubeUploadFailed.send(app);
             Err(e)
         }
     }
+}
+
+async fn copy_to_clipboard(app: &AppHandle, text: &str) {
+    let _ = app
+        .state::<ArcLock<ClipboardContext>>()
+        .write()
+        .await
+        .set_text(text.to_string());
 }
