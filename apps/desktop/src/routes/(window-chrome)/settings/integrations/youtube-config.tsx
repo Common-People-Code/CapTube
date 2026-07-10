@@ -36,7 +36,6 @@ function formatError(error: unknown): string {
 }
 
 export default function YouTubeConfigPage() {
-	console.log("[yt-config] component invoked");
 	const [status, { mutate: setStatus }] = createResource(() =>
 		commands.youtubeGetStatus(),
 	);
@@ -135,9 +134,6 @@ export default function YouTubeConfigPage() {
 
 	return (
 		<div class="cap-settings-page flex flex-col h-full custom-scroll">
-			<div style="background:#c00;color:#fff;padding:8px;font-size:14px">
-				YT-CONFIG-DEBUG: page rendered
-			</div>
 			<SettingsPageContent>
 				<IntegrationConfigHeader title="YouTube" />
 				<div class="space-y-6">

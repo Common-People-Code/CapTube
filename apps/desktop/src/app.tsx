@@ -73,6 +73,9 @@ const SettingsGoogleDriveConfigPage = lazy(
 			"./routes/(window-chrome)/settings/integrations/google-drive-config"
 		),
 );
+const SettingsYouTubeConfigPage = lazy(
+	() => import("./routes/(window-chrome)/settings/integrations/youtube-config"),
+);
 const OnboardingPage = lazy(
 	() => import("./routes/(window-chrome)/onboarding"),
 );
@@ -214,6 +217,10 @@ function Inner() {
 							<Route
 								path="/integrations/google-drive-config"
 								component={SettingsGoogleDriveConfigPage}
+							/>
+							<Route
+								path="/integrations/youtube-config"
+								component={SettingsYouTubeConfigPage}
 							/>
 						</Route>
 						<Route path="/onboarding" component={OnboardingPage} />
