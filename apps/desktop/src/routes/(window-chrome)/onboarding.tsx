@@ -69,20 +69,6 @@ interface ModeDetail {
 
 const modes: ModeDetail[] = [
 	{
-		id: "instant",
-		title: "Instant Mode",
-		tagline: "Record & share in seconds",
-		description:
-			"Your recording uploads as you capture. Stop recording and instantly get a shareable link — no waiting.",
-		icon: IconCapInstant,
-		features: [
-			"Instant shareable link",
-			"Background uploading",
-			"AI transcription & summary",
-			"Browser-based playback",
-		],
-	},
-	{
 		id: "studio",
 		title: "Studio Mode",
 		tagline: "Professional editing tools",
@@ -345,7 +331,7 @@ export default function OnboardingPage() {
 
 	const totalSteps = createMemo(() => {
 		if (permissionsOnly()) return 1;
-		return 8;
+		return 7;
 	});
 
 	createEffect(() => {
@@ -510,27 +496,22 @@ export default function OnboardingPage() {
 							</StepPanel>
 							<StepPanel active={step() === 2} index={2} currentStep={step()}>
 								<ModeDetailStep mode={modes[0]} active={step() === 2}>
-									<InstantMockup active={step() === 2} />
+									<StudioMockup active={step() === 2} />
 								</ModeDetailStep>
 							</StepPanel>
 							<StepPanel active={step() === 3} index={3} currentStep={step()}>
 								<ModeDetailStep mode={modes[1]} active={step() === 3}>
-									<StudioMockup active={step() === 3} />
+									<ScreenshotMockup active={step() === 3} />
 								</ModeDetailStep>
 							</StepPanel>
 							<StepPanel active={step() === 4} index={4} currentStep={step()}>
-								<ModeDetailStep mode={modes[2]} active={step() === 4}>
-									<ScreenshotMockup active={step() === 4} />
-								</ModeDetailStep>
+								<ToggleStep active={step() === 4} />
 							</StepPanel>
 							<StepPanel active={step() === 5} index={5} currentStep={step()}>
-								<ToggleStep active={step() === 5} />
+								<ShortcutsStep active={step() === 5} />
 							</StepPanel>
 							<StepPanel active={step() === 6} index={6} currentStep={step()}>
-								<ShortcutsStep active={step() === 6} />
-							</StepPanel>
-							<StepPanel active={step() === 7} index={7} currentStep={step()}>
-								<FaqStep active={step() === 7} />
+								<FaqStep active={step() === 6} />
 							</StepPanel>
 						</Show>
 					</div>
@@ -826,7 +807,7 @@ function ToggleStep(props: { active: boolean }) {
 			setUserClicked(false);
 			const t = setTimeout(() => setVisible(true), 100);
 			const interval = setInterval(() => {
-				if (!userClicked()) setActiveMode((prev) => (prev + 1) % 3);
+				if (!userClicked()) setActiveMode((prev) => (prev + 1) % modes.length);
 			}, 2500);
 			onCleanup(() => {
 				clearTimeout(t);
@@ -1084,19 +1065,10 @@ function FaqStep(props: { active: boolean }) {
 						.
 					</p>
 				</FaqItem>
-				<FaqItem question="What's the difference between Instant and Studio?">
-					<p class="text-[13px] text-gray-10 leading-relaxed">
-						Instant mode uploads as you record — stop recording and you'll have
-						a shareable link immediately. Studio mode records locally in full
-						quality, letting you edit with backgrounds, effects, and more before
-						sharing.
-					</p>
-				</FaqItem>
 				<FaqItem question="Where are my recordings stored?">
 					<p class="text-[13px] text-gray-10 leading-relaxed">
-						All recordings are stored locally on your computer. In Instant mode,
-						they're also uploaded to Cap's cloud for easy sharing. You can
-						manage storage in Settings.
+						All recordings are stored locally on your computer. You can manage
+						storage in Settings.
 					</p>
 				</FaqItem>
 				<FaqItem question="Can I change my shortcuts later?">
@@ -1107,9 +1079,9 @@ function FaqStep(props: { active: boolean }) {
 				</FaqItem>
 				<FaqItem question="How does sharing work?">
 					<p class="text-[13px] text-gray-10 leading-relaxed">
-						In Instant mode, you get a shareable link automatically when you
-						stop recording. In Studio mode, export your edited video and share
-						via Cap's cloud or save locally.
+						Record in Studio mode, then export your edited video or upload it
+						straight to your own YouTube channel as an unlisted video — the
+						shareable link is copied to your clipboard automatically.
 					</p>
 				</FaqItem>
 			</div>
@@ -1353,123 +1325,6 @@ function RecordingBar(props: {
 					aria-hidden="true"
 				>
 					<IconCapMoreVertical class="pointer-events-none size-5" />
-				</div>
-			</div>
-		</div>
-	);
-}
-
-function InstantMockup(props: { active: boolean }) {
-	const phase = createLoopingPhase(
-		() => props.active,
-		[300, 2350, 3350, 4350, 5350, 6350, 7350, 8350],
-		9550,
-	);
-
-	const activeStep = () => {
-		const p = phase();
-		if (p <= 5) return 0;
-		if (p <= 6) return 1;
-		return 2;
-	};
-
-	const recordingTime = () => {
-		const p = phase();
-		if (p >= 5) return "0:03";
-		if (p >= 4) return "0:02";
-		if (p >= 3) return "0:01";
-		if (p >= 2) return "0:00";
-		return "0:00";
-	};
-
-	return (
-		<div class="w-full h-full flex flex-col min-h-0 p-4">
-			<MockupStepBar
-				steps={["Record", "Stop", "Share link"]}
-				activeStep={activeStep()}
-			/>
-			<div class="relative flex-1 min-h-[200px] w-full max-w-[420px] mx-auto">
-				<div
-					class={cx(
-						"absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)]",
-						phase() >= 1 && phase() < 7
-							? "opacity-100"
-							: "pointer-events-none opacity-0",
-					)}
-				>
-					<div class="relative min-h-[52px] w-full max-w-[400px]">
-						<div
-							class={cx(
-								"flex w-full justify-center transition-all duration-720 ease-[cubic-bezier(0.34,1.3,0.64,1)]",
-								phase() === 1
-									? "relative z-2 translate-y-0 scale-100 opacity-100"
-									: "pointer-events-none absolute inset-0 z-1 flex items-center justify-center opacity-0 scale-[0.94] -translate-y-2",
-							)}
-						>
-							<StartRecordingClickMock active={phase() === 1} mode="instant" />
-						</div>
-						<div
-							class={cx(
-								"w-full transition-all duration-720 ease-[cubic-bezier(0.34,1.3,0.64,1)]",
-								phase() >= 2 && phase() < 7
-									? "relative z-2 translate-y-0 scale-100 opacity-100"
-									: "pointer-events-none absolute inset-0 z-1 flex items-center justify-center opacity-0 scale-[0.94] translate-y-3",
-							)}
-						>
-							<div class="w-full shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
-								<RecordingBar time={recordingTime()} stopped={phase() >= 6} />
-							</div>
-						</div>
-					</div>
-				</div>
-				<div
-					class={cx(
-						"absolute inset-0 flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-						phase() >= 7
-							? "opacity-100 translate-y-0 scale-100"
-							: "opacity-0 translate-y-4 scale-[0.97] pointer-events-none",
-					)}
-				>
-					<div class="w-full max-w-[340px] rounded-xl overflow-hidden border border-gray-4 bg-white dark:bg-gray-1 shadow-lg">
-						<div class="flex flex-col items-center gap-3 px-4 py-4">
-							<div class="flex items-center gap-2">
-								<div class="size-5 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-									<IconLucideCheck class="size-3 text-green-600" />
-								</div>
-								<span class="text-[12px] font-medium text-gray-12">
-									Link ready to share!
-								</span>
-							</div>
-							<div class="flex items-center gap-2 w-full">
-								<div class="flex-1 flex items-center px-3 py-2 rounded-lg bg-white dark:bg-gray-3 border border-gray-4">
-									<span class="text-[11px] text-gray-11 font-mono">
-										cap.link/m4k92x
-									</span>
-								</div>
-								<div
-									class={cx(
-										"flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[11px] font-medium transition-all duration-300 shrink-0",
-										phase() >= 8
-											? "bg-green-50 border-green-200 text-green-700 scale-95"
-											: "bg-white dark:bg-gray-3 border-gray-5 text-gray-11",
-									)}
-								>
-									<Show
-										when={phase() >= 8}
-										fallback={
-											<>
-												<IconLucideCopy class="size-3" stroke-width={2} />
-												Copy
-											</>
-										}
-									>
-										<IconLucideCheck class="size-3" />
-										Copied!
-									</Show>
-								</div>
-							</div>
-						</div>
-					</div>
 				</div>
 			</div>
 		</div>

@@ -34,7 +34,6 @@ import {
 	type UploadResult,
 } from "~/utils/tauri";
 import IconCapEditor from "~icons/cap/editor";
-import IconCapUpload from "~icons/cap/upload";
 import IconLucideClock from "~icons/lucide/clock";
 import IconLucideEye from "~icons/lucide/eye";
 import { FPS, OUTPUT_SIZE } from "./editor/context";
@@ -153,11 +152,6 @@ export default function () {
 									copy.isPending || save.isPending || upload.isPending;
 
 								createFakeWindowBounds(ref, () => media.path);
-
-								const recordingMeta = createQuery(() => ({
-									queryKey: ["recordingMeta", media.path],
-									queryFn: () => commands.getRecordingMeta(media.path, type),
-								}));
 
 								return (
 									<Suspense>
@@ -361,18 +355,6 @@ export default function () {
 														onClick={() => copy.mutate()}
 													>
 														<IconCapCopy class="size-4" />
-													</TooltipIconButton>
-													<TooltipIconButton
-														class="absolute right-3 bottom-3 z-998"
-														tooltipText={
-															recordingMeta.data?.sharing
-																? "Copy Shareable Link"
-																: "Create Shareable Link"
-														}
-														tooltipPlacement="left"
-														onClick={() => upload.mutate()}
-													>
-														<IconCapUpload class="size-4" />
 													</TooltipIconButton>
 													<div class="flex absolute inset-0 justify-center items-center">
 														<Button
