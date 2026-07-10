@@ -69,16 +69,59 @@ fn upload_client() -> Result<reqwest::Client, YouTubeError> {
         .map_err(|e| YouTubeError::Http(e.to_string()))
 }
 
+/// reqwest's top-level message ("error sending request for url ...") hides the real cause; walk the
+/// error source chain so failures are actionable (timeout / connection reset / dns / tls).
+fn describe_http(e: reqwest::Error) -> YouTubeError {
+    use std::error::Error;
+    let mut msg = e.to_string();
+    let mut source = e.source();
+    while let Some(s) = source {
+        let text = s.to_string();
+        if !msg.contains(&text) {
+            msg.push_str(": ");
+            msg.push_str(&text);
+        }
+        source = s.source();
+    }
+    YouTubeError::Http(msg)
+}
+
+/// Retries a request builder up to 3 times on transient send/connect/timeout failures. The builder
+/// is rebuilt each attempt (a `RequestBuilder` is consumed by `send`). Non-transient errors and
+/// non-success HTTP responses are returned immediately for the caller to interpret.
+async fn send_with_retry<F, Fut>(mut build: F) -> Result<reqwest::Response, YouTubeError>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = reqwest::Result<reqwest::Response>>,
+{
+    let mut attempt = 0u32;
+    loop {
+        match build().await {
+            Ok(response) => return Ok(response),
+            Err(e) => {
+                attempt += 1;
+                let transient = e.is_connect() || e.is_timeout() || e.is_request();
+                if attempt >= 3 || !transient {
+                    return Err(describe_http(e));
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(600 * attempt as u64)).await;
+            }
+        }
+    }
+}
+
 pub async fn list_channels(app: &AppHandle) -> Result<Vec<YouTubeChannel>, YouTubeError> {
     let token = oauth::ensure_access_token(app).await?;
 
-    let response = short_client()?
-        .get(CHANNELS_ENDPOINT)
-        .query(&[("part", "snippet"), ("mine", "true")])
-        .bearer_auth(&token)
-        .send()
-        .await
-        .map_err(|e| YouTubeError::Http(e.to_string()))?;
+    let client = short_client()?;
+    let response = send_with_retry(|| {
+        client
+            .get(CHANNELS_ENDPOINT)
+            .query(&[("part", "snippet"), ("mine", "true")])
+            .bearer_auth(&token)
+            .send()
+    })
+    .await?;
 
     let status = response.status();
     if !status.is_success() {
@@ -86,10 +129,7 @@ pub async fn list_channels(app: &AppHandle) -> Result<Vec<YouTubeChannel>, YouTu
         return Err(map_api_error(status.as_u16(), body));
     }
 
-    let parsed: ChannelsResponse = response
-        .json()
-        .await
-        .map_err(|e| YouTubeError::Http(e.to_string()))?;
+    let parsed: ChannelsResponse = response.json().await.map_err(describe_http)?;
 
     Ok(parsed
         .items
@@ -113,13 +153,15 @@ const VIDEOS_ENDPOINT: &str = "https://www.googleapis.com/youtube/v3/videos";
 pub async fn delete_video(app: &AppHandle, video_id: &str) -> Result<(), YouTubeError> {
     let token = oauth::ensure_access_token(app).await?;
 
-    let response = short_client()?
-        .delete(VIDEOS_ENDPOINT)
-        .query(&[("id", video_id)])
-        .bearer_auth(&token)
-        .send()
-        .await
-        .map_err(|e| YouTubeError::Http(e.to_string()))?;
+    let client = short_client()?;
+    let response = send_with_retry(|| {
+        client
+            .delete(VIDEOS_ENDPOINT)
+            .query(&[("id", video_id)])
+            .bearer_auth(&token)
+            .send()
+    })
+    .await?;
 
     let status = response.status();
     if status.is_success() || status.as_u16() == 204 {
@@ -173,15 +215,17 @@ pub async fn upload_video(
         },
     });
 
-    let init = short_client()?
-        .post(UPLOAD_ENDPOINT)
-        .bearer_auth(&token)
-        .header("X-Upload-Content-Length", total.to_string())
-        .header("X-Upload-Content-Type", "video/*")
-        .json(&metadata)
-        .send()
-        .await
-        .map_err(|e| YouTubeError::Http(e.to_string()))?;
+    let init_client = short_client()?;
+    let init = send_with_retry(|| {
+        init_client
+            .post(UPLOAD_ENDPOINT)
+            .bearer_auth(&token)
+            .header("X-Upload-Content-Length", total.to_string())
+            .header("X-Upload-Content-Type", "video/*")
+            .json(&metadata)
+            .send()
+    })
+    .await?;
 
     let status = init.status();
     if !status.is_success() {
@@ -225,15 +269,19 @@ pub async fn upload_video(
         let chunk_start = offset;
         let chunk_end = offset + filled as u64 - 1;
         let content_range = format!("bytes {chunk_start}-{chunk_end}/{total}");
+        let chunk = &buffer[..filled];
 
-        let response = client
-            .put(&session_url)
-            .header(reqwest::header::CONTENT_LENGTH, filled.to_string())
-            .header(reqwest::header::CONTENT_RANGE, content_range)
-            .body(buffer[..filled].to_vec())
-            .send()
-            .await
-            .map_err(|e| YouTubeError::Http(e.to_string()))?;
+        // Re-sending the same Content-Range on a transient failure is safe: YouTube's resumable
+        // protocol is idempotent per byte range.
+        let response = send_with_retry(|| {
+            client
+                .put(&session_url)
+                .header(reqwest::header::CONTENT_LENGTH, filled.to_string())
+                .header(reqwest::header::CONTENT_RANGE, &content_range)
+                .body(chunk.to_vec())
+                .send()
+        })
+        .await?;
 
         offset += filled as u64;
         let pct = if total > 0 {
@@ -248,10 +296,7 @@ pub async fn upload_video(
             continue;
         }
         if status.is_success() {
-            let body: VideoResource = response
-                .json()
-                .await
-                .map_err(|e| YouTubeError::Http(e.to_string()))?;
+            let body: VideoResource = response.json().await.map_err(describe_http)?;
             return Ok(body.id);
         }
 
