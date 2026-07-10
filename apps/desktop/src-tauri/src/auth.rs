@@ -114,10 +114,10 @@ impl AuthStore {
     }
 
     pub fn is_upgraded(&self) -> bool {
-        match &self.plan {
-            Some(plan) => plan.upgraded || plan.manual,
-            None => false,
-        }
+        // CapTube is an un-gated open-source fork: features that were locked behind a paid "Cap Pro"
+        // plan but don't rely on cap.so's servers (recording/export resolution, duration) are always
+        // unlocked. Server-dependent features are hidden elsewhere rather than gated here.
+        true
     }
 
     pub fn set(app: &AppHandle, value: Option<Self>) -> Result<(), String> {

@@ -214,10 +214,8 @@ function Inner(props: { initialStore: GeneralSettingsStore | null }) {
 		deriveGeneralSettings(props.initialStore),
 	);
 	const auth = authStore.createQuery();
-	const hasCapPro = createMemo(() => {
-		const plan = auth.data?.plan;
-		return !!plan && (plan.upgraded || plan.manual);
-	});
+	// CapTube is an un-gated fork — Pro-only local features (e.g. recording resolution) are unlocked.
+	const hasCapPro = createMemo(() => true);
 	const instantModeMaxResolution = createMemo(() =>
 		hasCapPro()
 			? (settings.instantModeMaxResolution ?? PRO_INSTANT_MODE_MAX_RESOLUTION)
