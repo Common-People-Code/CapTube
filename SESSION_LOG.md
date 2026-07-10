@@ -2,12 +2,41 @@
 
 Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEMPLATE.md` for the entry format, and `CLAUDE.md` for current status.
 
-**Current Phase:** Phase 3 — Notification action button
-**Sessions completed:** 2
+**Current Phase:** Phase 3 pending · live dogfood in progress (blocked on a blank settings page)
+**Sessions completed:** 3
 
 ---
 
 *Add new entries above this line*
+
+---
+
+## Session 3 — 2026-07-10 (live dogfood, in progress)
+
+### What We Accomplished
+- Got the desktop app building and running locally on matt's Mac (Apple M1 Pro, macOS).
+- Documented the full macOS build path and the gotchas hit along the way.
+
+### Build gotchas resolved (macOS)
+- **Rust PATH**: after `rustup`, must `. "$HOME/.cargo/env"` (or new shell) before `cargo`/`pnpm dev:desktop`.
+- **Repo not cloned**: `git clone https://github.com/Common-People-Code/CapTube.git` then `git checkout claude/cap-youtube-upload-vyv3pr`.
+- **`env-setup`**: desktop only; accept default `VITE_SERVER_URL=https://cap.so` (the YouTube feature ignores it); decline Docker/S3/MySQL.
+- **`pnpm dev:desktop`** auto-runs `cap-setup` (downloads FFmpeg/native-deps) + `build:sidecar` (builds cap-muxer/cap-exporter/cap-cli) — no manual sidecar build needed.
+- **Full Xcode required**: build failed compiling `cidre` with `xcodebuild requires Xcode` until full Xcode was installed and selected (`sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer && sudo xcodebuild -license accept`). Command Line Tools alone is not enough.
+- **Screen Recording permission in dev** attaches to the **terminal app** (Terminal/iTerm), not "Cap", because the recorder runs as a child of the dev process. Grant it there and fully quit/relaunch the terminal.
+
+### Open issue (BLOCKING) — YouTube settings page renders blank/gray
+- Symptom: Settings → Integrations → YouTube → Configure shows a gray page. `location.href` = `http://localhost:3002/settings/integrations/youtube-config` (correct route/window). `document.querySelector('#app').innerText` = `""`. **No console errors.** Backend is fine: `window.__TAURI_INTERNALS__.invoke('youtube_get_status')` returns `{connected:false,hasCredentials:false,...}`.
+- Tried: removed the page-level `<Suspense>` gate (whose fallback was a text-less spinner) so the form renders immediately — committed (91151b4) and confirmed HMR-loaded via Vite `page reload …/youtube-config.tsx` — but **still blank**.
+- Next hypotheses to check: (a) a silent ErrorBoundary swallowing a render error; (b) the shared `Section`/`SettingsPageContent` from `../Setting`; (c) SSR pass rendering empty (Vite logs an `(ssr)` reload). Plan: push a version with `console.log("[yt-config] mount")` + an unconditional visible banner to determine whether the component mounts at all.
+
+### Next Session Should
+- [ ] Resolve the blank YouTube settings page (instrument mount + first visible element).
+- [ ] Then run the real end-to-end: paste Google client id/secret → connect → pick channel → record → upload.
+- [ ] Revisit the channelId-in-insert nuance (YouTube ignores `snippet.channelId`; channel routing is set at OAuth consent) and Phase 3 (native notification buttons are mobile-only in tauri-plugin-notification v2).
+
+### Notes
+- PR #1 has Phases 1 & 2 + docs. Branch: `claude/cap-youtube-upload-vyv3pr`.
 
 ---
 
