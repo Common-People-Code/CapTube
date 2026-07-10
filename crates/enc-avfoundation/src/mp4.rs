@@ -779,6 +779,7 @@ impl MP4Encoder {
                     last_audio_end_pts = self.last_audio_end_pts,
                     timestamp_offset_us = self.timestamp_offset.as_micros() as i64,
                     pending_video = self.pending_video_frame.is_some(),
+                    writer_error = %describe_writer_error(&err),
                     "Audio WriterFailed with timing state"
                 );
                 self.writer_failed = true;
@@ -840,6 +841,7 @@ impl MP4Encoder {
                     last_audio_timescale = self.last_audio_timescale,
                     timestamp_offset_us = self.timestamp_offset.as_micros() as i64,
                     had_deferred_offset = pending.deferred_offset.is_some(),
+                    writer_error = %describe_writer_error(&err),
                     "Video WriterFailed with timing state"
                 );
                 self.writer_failed = true;
@@ -3996,6 +3998,17 @@ fn rebuild_video_sample_buf(
     } else {
         frame.copy_with_new_timing(&[timing])
     }
+}
+
+/// Full diagnostic string for an `AVAssetWriter` failure. The bare `Display`
+/// of an `ns::Error` is only its `localizedDescription` — usually the useless
+/// "The operation could not be completed." `description` additionally carries
+/// the domain, code, and the whole `userInfo`, including the `NSUnderlyingError`
+/// chain that tells a disk-full failure (`NSPOSIXErrorDomain` code 28) apart
+/// from a genuine VideoToolbox codec fault (`NSOSStatusErrorDomain`, a negative
+/// `-12xxx` code).
+pub fn describe_writer_error(err: &ns::Error) -> String {
+    err.desc().to_string()
 }
 
 fn writer_status_name(writer: &av::AssetWriter) -> &'static str {

@@ -446,8 +446,10 @@ impl Muxer for AVFoundationMp4Muxer {
                                     Err(QueueFrameError::WriterFailed(err)) => {
                                         let total = video_count_thread
                                             .load(std::sync::atomic::Ordering::Relaxed);
+                                        let detail =
+                                            cap_enc_avfoundation::describe_writer_error(&err);
                                         let message = format!(
-                                            "Failed to encode video frame: WriterFailed/{err} \
+                                            "Failed to encode video frame: WriterFailed/{detail} \
                                              (frame #{total}, ts={timestamp:?})"
                                         );
                                         set_fatal_error(&video_fatal_error, message.clone());
@@ -575,8 +577,10 @@ impl Muxer for AVFoundationMp4Muxer {
                                         Err(QueueFrameError::WriterFailed(err)) => {
                                             let total = audio_count_thread
                                                 .load(std::sync::atomic::Ordering::Relaxed);
+                                            let detail =
+                                                cap_enc_avfoundation::describe_writer_error(&err);
                                             let message = format!(
-                                                "Failed to encode audio frame: WriterFailed/{err} \
+                                                "Failed to encode audio frame: WriterFailed/{detail} \
                                                  (frame #{total}, ts={timestamp:?})"
                                             );
                                             set_fatal_error(&audio_fatal_error, message.clone());
@@ -1036,8 +1040,10 @@ impl Muxer for AVFoundationCameraMuxer {
                                         std::thread::sleep(Duration::from_micros(500));
                                     }
                                     Err(QueueFrameError::WriterFailed(err)) => {
+                                        let detail =
+                                            cap_enc_avfoundation::describe_writer_error(&err);
                                         let message = format!(
-                                            "Failed to encode camera frame: WriterFailed/{err}"
+                                            "Failed to encode camera frame: WriterFailed/{detail}"
                                         );
                                         set_fatal_error(&video_fatal_error, message.clone());
                                         return Err(anyhow!(message));
@@ -1160,8 +1166,10 @@ impl Muxer for AVFoundationCameraMuxer {
                                             std::thread::sleep(Duration::from_micros(500));
                                         }
                                         Err(QueueFrameError::WriterFailed(err)) => {
+                                            let detail =
+                                                cap_enc_avfoundation::describe_writer_error(&err);
                                             let message = format!(
-                                                "Failed to encode camera audio frame: WriterFailed/{err} \
+                                                "Failed to encode camera audio frame: WriterFailed/{detail} \
                                                  (frame #{total_frames}, ts={timestamp:?})"
                                             );
                                             set_fatal_error(&audio_fatal_error, message.clone());
