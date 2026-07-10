@@ -189,7 +189,9 @@ export default function GoogleDriveConfigPage() {
 			});
 
 			if (response.status === 403) {
-				await commands.showWindow("Upgrade");
+				await commands.globalMessageDialog(
+					"Your Cap account doesn't have access to Google Drive storage.",
+				);
 				return null;
 			}
 

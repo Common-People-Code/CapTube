@@ -22,7 +22,6 @@ import { initializeTitlebar } from "~/utils/titlebar-state";
 import { useEditorContext } from "./context";
 import OrganizationDropdown from "./OrganizationDropdown";
 import PresetsDropdown from "./PresetsDropdown";
-import ShareButton from "./ShareButton";
 import { EditorButton } from "./ui";
 import YouTubeUploadButton from "./YouTubeUploadButton";
 
@@ -55,7 +54,6 @@ export function Header() {
 		meta,
 		exportState,
 		setExportState,
-		customDomain,
 		editorState,
 		setEditorState,
 	} = useEditorContext();
@@ -169,9 +167,6 @@ export function Header() {
 				/>
 				<div data-tauri-drag-region class="flex-1 h-full" />
 				<YouTubeUploadButton />
-				<Show when={customDomain.data}>
-					<ShareButton />
-				</Show>
 				<Button
 					variant={isClipsOpen() ? "white" : "gray"}
 					class="flex gap-1.5 justify-center h-[40px]"

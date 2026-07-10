@@ -102,7 +102,7 @@ export default function AppsTab() {
 				"Connect Google Drive for new shareable link uploads. Cap stores new videos in a private Cap folder in your Drive and continues serving them through Cap after normal access checks.",
 			icon: GoogleDriveIcon,
 			url: "/settings/integrations/google-drive-config",
-			pro: true,
+			pro: false,
 		},
 		{
 			name: "S3 Config",
@@ -110,7 +110,7 @@ export default function AppsTab() {
 				"Connect your own S3 bucket for complete control over your data storage. All new shareable link uploads will be automatically uploaded to your configured S3 bucket, ensuring you maintain complete ownership and control over your content. Perfect for organizations requiring data sovereignty and custom storage policies.",
 			icon: IconLucideDatabase,
 			url: "/settings/integrations/s3-config",
-			pro: true,
+			pro: false,
 		},
 		{
 			name: "YouTube",

@@ -233,11 +233,6 @@ export default function Settings(props: RouteSectionProps) {
 			icon: IconLucideUnplug,
 		},
 		{
-			href: "license",
-			name: "License",
-			icon: IconLucideGift,
-		},
-		{
 			href: "experimental",
 			name: "Experimental",
 			icon: IconCapSettings,
