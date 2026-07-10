@@ -106,6 +106,29 @@ pub async fn list_channels(app: &AppHandle) -> Result<Vec<YouTubeChannel>, YouTu
         .collect())
 }
 
+const VIDEOS_ENDPOINT: &str = "https://www.googleapis.com/youtube/v3/videos";
+
+/// Permanently deletes a video the user owns. Requires the `youtube.force-ssl` scope; a 403 here
+/// means the current token was granted upload-only access and the user must reconnect.
+pub async fn delete_video(app: &AppHandle, video_id: &str) -> Result<(), YouTubeError> {
+    let token = oauth::ensure_access_token(app).await?;
+
+    let response = short_client()?
+        .delete(VIDEOS_ENDPOINT)
+        .query(&[("id", video_id)])
+        .bearer_auth(&token)
+        .send()
+        .await
+        .map_err(|e| YouTubeError::Http(e.to_string()))?;
+
+    let status = response.status();
+    if status.is_success() || status.as_u16() == 204 {
+        return Ok(());
+    }
+    let body = response.text().await.unwrap_or_default();
+    Err(map_api_error(status.as_u16(), body))
+}
+
 pub struct UploadRequest {
     pub title: String,
     pub description: String,

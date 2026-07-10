@@ -12,7 +12,10 @@ use super::{YouTubeError, store::YouTubeStore};
 const AUTH_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT: &str = "https://oauth2.googleapis.com/token";
 const REVOKE_ENDPOINT: &str = "https://oauth2.googleapis.com/revoke";
-const SCOPES: &str = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly";
+const BASE_SCOPES: &str = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly";
+// Adds delete capability (videos.delete). Only requested when the user opts into deleting old
+// versions, so upload-only users never grant "manage/delete your videos".
+const DELETE_SCOPE: &str = "https://www.googleapis.com/auth/youtube.force-ssl";
 
 fn now_secs() -> i64 {
     SystemTime::now()
@@ -64,6 +67,13 @@ pub async fn connect(app: &AppHandle) -> Result<YouTubeStore, YouTubeError> {
         .effective_client_secret()
         .ok_or(YouTubeError::MissingCredentials)?;
 
+    let want_delete = store.delete_old_on_reupload;
+    let scope = if want_delete {
+        format!("{BASE_SCOPES} {DELETE_SCOPE}")
+    } else {
+        BASE_SCOPES.to_string()
+    };
+
     let verifier = random_token(32);
     let challenge = code_challenge(&verifier);
     let state = random_token(16);
@@ -95,7 +105,7 @@ pub async fn connect(app: &AppHandle) -> Result<YouTubeStore, YouTubeError> {
             .append_pair("client_id", &client_id)
             .append_pair("redirect_uri", &redirect_uri)
             .append_pair("response_type", "code")
-            .append_pair("scope", SCOPES)
+            .append_pair("scope", &scope)
             .append_pair("code_challenge", &challenge)
             .append_pair("code_challenge_method", "S256")
             .append_pair("access_type", "offline")
@@ -167,6 +177,7 @@ pub async fn connect(app: &AppHandle) -> Result<YouTubeStore, YouTubeError> {
         s.refresh_token = Some(refresh_token);
         s.access_token = Some(tokens.access_token);
         s.access_token_expires_at = Some(expires_at);
+        s.delete_scope_granted = want_delete;
     })
     .map_err(YouTubeError::Store)?;
 

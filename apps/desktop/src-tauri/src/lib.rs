@@ -4941,6 +4941,7 @@ fn make_specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             youtube::youtube_list_channels,
             youtube::youtube_set_channel,
             youtube::youtube_set_preferences,
+            youtube::youtube_set_delete_old,
             youtube::youtube_upload_recording,
         ])
         .events(tauri_specta::collect_events![

@@ -126,6 +126,14 @@ export default function YouTubeConfigPage() {
 		onError: (error) => commands.globalMessageDialog(formatError(error)),
 	}));
 
+	const toggleDeleteOld = useMutation(() => ({
+		mutationFn: async (value: boolean) => {
+			const next = await commands.youtubeSetDeleteOld(value);
+			setStatus(next);
+		},
+		onError: (error) => commands.globalMessageDialog(formatError(error)),
+	}));
+
 	const busy = () =>
 		status.loading ||
 		saveCredentials.isPending ||
@@ -317,6 +325,26 @@ export default function YouTubeConfigPage() {
 									value={autoUpload() ?? false}
 									onChange={(value) => toggleAutoUpload.mutate(value)}
 								/>
+								<ToggleSettingItem
+									label="Delete previous version on re-upload"
+									description="Re-uploading always creates a new YouTube video. Turn this on to permanently delete the previous one. Needs delete permission — reconnect after enabling."
+									value={status()?.deleteOldOnReupload ?? false}
+									onChange={(value) => toggleDeleteOld.mutate(value)}
+								/>
+								<Show when={status()?.needsReconnectForDelete}>
+									<div class="flex gap-3 justify-between items-center p-2 rounded-lg border bg-gray-3 border-gray-5">
+										<p class="text-xs leading-snug text-gray-11">
+											Reconnect to grant permission to delete videos.
+										</p>
+										<Button
+											variant="primary"
+											disabled={busy()}
+											onClick={() => connect.mutate()}
+										>
+											{connect.isPending ? "Waiting..." : "Reconnect"}
+										</Button>
+									</div>
+								</Show>
 								<div class="space-y-2">
 									<label class="text-[13px] text-gray-12">
 										Default privacy

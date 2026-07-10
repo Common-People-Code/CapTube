@@ -505,6 +505,9 @@ async youtubeSetChannel(channelId: string, channelTitle: string) : Promise<YouTu
 async youtubeSetPreferences(autoUpload: boolean, defaultPrivacy: YouTubePrivacy) : Promise<YouTubeStatus> {
     return await TAURI_INVOKE("youtube_set_preferences", { autoUpload, defaultPrivacy });
 },
+async youtubeSetDeleteOld(enabled: boolean) : Promise<YouTubeStatus> {
+    return await TAURI_INVOKE("youtube_set_delete_old", { enabled });
+},
 /**
  * Uploads the finished mp4 for a recording project to YouTube. The caller is expected to have
  * rendered the video first (studio recordings only have an output file after export); this mirrors
@@ -964,8 +967,19 @@ export type YouTubeChannel = { id: string; title: string; thumbnailUrl?: string 
 export type YouTubeError = { type: "MissingCredentials" } | { type: "NotConnected" } | { type: "OAuthCancelled" } | { type: "NeedsReconnect" } | { type: "Oauth"; message: string } | { type: "TokenExchange"; message: string } | { type: "QuotaExceeded" } | { type: "FileNotFound" } | { type: "Api"; message: { code: number; message: string } } | { type: "Http"; message: string } | { type: "Store"; message: string }
 export type YouTubePrivacy = "unlisted" | "private" | "public"
 export type YouTubeSharingMeta = { videoId: string; url: string; privacy: string; uploadedAt: number }
-export type YouTubeStatus = { connected: boolean; hasCredentials: boolean; channelId: string | null; channelTitle: string | null; autoUpload: boolean; defaultPrivacy: YouTubePrivacy }
-export type YouTubeStore = { clientId?: string | null; clientSecret?: string | null; refreshToken?: string | null; accessToken?: string | null; accessTokenExpiresAt?: number | null; channelId?: string | null; channelTitle?: string | null; autoUpload?: boolean; defaultPrivacy?: YouTubePrivacy }
+export type YouTubeStatus = { connected: boolean; hasCredentials: boolean; channelId: string | null; channelTitle: string | null; autoUpload: boolean; defaultPrivacy: YouTubePrivacy; deleteOldOnReupload: boolean; 
+/**
+ * True when the delete setting is on but the current connection lacks the delete scope — the UI
+ * uses this to prompt a reconnect.
+ */
+needsReconnectForDelete: boolean }
+export type YouTubeStore = { clientId?: string | null; clientSecret?: string | null; refreshToken?: string | null; accessToken?: string | null; accessTokenExpiresAt?: number | null; channelId?: string | null; channelTitle?: string | null; autoUpload?: boolean; defaultPrivacy?: YouTubePrivacy; deleteOldOnReupload?: boolean; 
+/**
+ * Whether the current token was granted the delete-capable scope. Set when connecting with
+ * `delete_old_on_reupload` enabled; lets the UI prompt a reconnect when the setting is turned on
+ * after an upload-only connection.
+ */
+deleteScopeGranted?: boolean }
 export type ZoomMode = "auto" | { manual: { x: number; y: number } }
 export type ZoomSegment = { start: number; end: number; amount: number; mode: ZoomMode; glideDirection?: GlideDirection; glideSpeed?: number; instantAnimation?: boolean; edgeSnapRatio?: number }
 

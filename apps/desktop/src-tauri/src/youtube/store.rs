@@ -53,6 +53,13 @@ pub struct YouTubeStore {
     pub auto_upload: bool,
     #[serde(default)]
     pub default_privacy: YouTubePrivacy,
+    #[serde(default)]
+    pub delete_old_on_reupload: bool,
+    /// Whether the current token was granted the delete-capable scope. Set when connecting with
+    /// `delete_old_on_reupload` enabled; lets the UI prompt a reconnect when the setting is turned on
+    /// after an upload-only connection.
+    #[serde(default)]
+    pub delete_scope_granted: bool,
 }
 
 impl YouTubeStore {

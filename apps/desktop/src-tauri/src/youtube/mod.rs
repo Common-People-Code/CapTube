@@ -53,6 +53,10 @@ pub struct YouTubeStatus {
     pub channel_title: Option<String>,
     pub auto_upload: bool,
     pub default_privacy: YouTubePrivacy,
+    pub delete_old_on_reupload: bool,
+    /// True when the delete setting is on but the current connection lacks the delete scope — the UI
+    /// uses this to prompt a reconnect.
+    pub needs_reconnect_for_delete: bool,
 }
 
 impl From<&YouTubeStore> for YouTubeStatus {
@@ -65,6 +69,10 @@ impl From<&YouTubeStore> for YouTubeStatus {
             channel_title: store.channel_title.clone(),
             auto_upload: store.auto_upload,
             default_privacy: store.default_privacy.clone(),
+            delete_old_on_reupload: store.delete_old_on_reupload,
+            needs_reconnect_for_delete: store.delete_old_on_reupload
+                && store.is_connected()
+                && !store.delete_scope_granted,
         }
     }
 }
@@ -154,6 +162,19 @@ pub async fn youtube_set_preferences(
     Ok(YouTubeStatus::from(&store))
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn youtube_set_delete_old(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<YouTubeStatus, YouTubeError> {
+    let store = YouTubeStore::update(&app, |s| {
+        s.delete_old_on_reupload = enabled;
+    })
+    .map_err(YouTubeError::Store)?;
+    Ok(YouTubeStatus::from(&store))
+}
+
 /// Uploads the finished mp4 for a recording project to YouTube. The caller is expected to have
 /// rendered the video first (studio recordings only have an output file after export); this mirrors
 /// the cap.so `upload_exported_video` contract.
@@ -164,17 +185,21 @@ pub async fn youtube_upload_recording(
     project_path: PathBuf,
     progress: Channel<UploadProgress>,
 ) -> Result<YouTubeSharingMeta, YouTubeError> {
-    upload_project(&app, &project_path, None, true, &progress).await
+    // Manual uploads always create a fresh video — YouTube's API can't replace a video's footage,
+    // so re-uploading after an edit is a new unlisted video by design.
+    upload_project(&app, &project_path, None, true, true, &progress).await
 }
 
 /// Uploads a project's finished mp4 to YouTube and records the result on `RecordingMeta`. Shared by
 /// the manual command and the automation host. Assumes the mp4 already exists at
-/// `meta.output_path()`; the caller renders studio recordings first.
+/// `meta.output_path()`; the caller renders studio recordings first. When `allow_reupload` is false
+/// (auto-upload), an already-uploaded recording is skipped and its existing link is reused.
 pub async fn upload_project(
     app: &AppHandle,
     project_path: &std::path::Path,
     privacy_override: Option<YouTubePrivacy>,
     copy_link: bool,
+    allow_reupload: bool,
     progress: &Channel<UploadProgress>,
 ) -> Result<YouTubeSharingMeta, YouTubeError> {
     let store = YouTubeStore::get(app)
@@ -187,12 +212,14 @@ pub async fn upload_project(
     let mut meta = RecordingMeta::load_for_project(project_path)
         .map_err(|e| YouTubeError::Store(e.to_string()))?;
 
-    if let Some(existing) = meta.youtube.clone() {
+    if !allow_reupload && let Some(existing) = meta.youtube.clone() {
         if copy_link {
             copy_to_clipboard(app, &existing.url).await;
         }
         return Ok(existing);
     }
+
+    let previous_video_id = meta.youtube.as_ref().map(|y| y.video_id.clone());
 
     let file_path = meta.output_path();
     if !file_path.exists() {
@@ -225,6 +252,16 @@ pub async fn upload_project(
             meta.save_for_project()
                 .map_err(|e| error!("Failed to save recording meta: {e}"))
                 .ok();
+
+            if store.delete_old_on_reupload
+                && let Some(old_id) = previous_video_id
+                && old_id != sharing.video_id
+            {
+                if let Err(e) = api::delete_video(app, &old_id).await {
+                    // A failed delete must not fail the upload — the new video is already live.
+                    error!("Failed to delete previous YouTube video {old_id}: {e}");
+                }
+            }
 
             if copy_link {
                 copy_to_clipboard(app, &sharing.url).await;

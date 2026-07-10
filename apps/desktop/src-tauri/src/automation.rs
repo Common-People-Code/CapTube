@@ -285,6 +285,7 @@ impl AutomationHost for DesktopAutomationHost {
             project_path,
             Some(crate::youtube::YouTubePrivacy::from_api_value(privacy)),
             copy_link,
+            false,
             &channel,
         )
         .await
