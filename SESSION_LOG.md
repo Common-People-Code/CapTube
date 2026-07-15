@@ -3,11 +3,54 @@
 Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEMPLATE.md` for the entry format, and `CLAUDE.md` for current status.
 
 **Current Phase:** Phase 3 — Notification action button
-**Sessions completed:** 2
+**Sessions completed:** 3
 
 ---
 
 *Add new entries above this line*
+
+---
+
+## Session 3 — 2026-07-15
+
+### What We Accomplished
+- Diagnosed a build failure the user hit on macOS with ~12 GB free disk. Established it was **build scratch (`target/`), not recording and not the distributable** — the two had been conflated. The shipped DMG is a few hundred MB; the 20–40 GB is compiler intermediates.
+- Found the real waste: `[profile.release]` carried `debug = true`, baking full debuginfo into every shipped binary (main app + `cap-muxer`/`cap-exporter`/`cap-cli` sidecars). Tauri doesn't strip by default, so it bloated both `target/` and the DMG.
+- **Shrunk release builds and the distributable**: set `debug = false` + `strip = true` on `[profile.release]`; kept `lto`/`opt-level = "s"`/`codegen-units = 1` (those keep the binary small — only the debuginfo was dead weight). `cargo verify-project` passes.
+- Documented the build footprint and low-disk build path (relocating `target/` via `CARGO_TARGET_DIR`, e.g. to an external HDD) in `README.md` + `CLAUDE.md`.
+- Opened **draft PR #2** on branch `claude/project-status-disk-space-6neui5` (branched fresh off `main` after PR #1 merged). Commits `95ee344` (docs) and `499a05f` (profile + docs).
+
+### Technical Decisions Made
+
+**Strip + drop debuginfo, but leave LTO/panic alone**
+- What: `debug = false`, `strip = true`; did *not* touch `lto`, `opt-level`, or `panic = "unwind"`.
+- Why: Debuginfo was the wasteful part inflating both build scratch and the DMG. LTO + `opt-level = "s"` make the binary *smaller*, so they stay. `panic = "abort"` would shave more but risks `catch_unwind`-based error handling in the recording paths.
+- Trade-off accepted: release crash backtraces lose symbol/line detail — fine for a self-distributed fork. Follow-up if richer crash reports are ever needed: `split-debuginfo` with separately-archived symbols.
+
+**Docs-only for `CARGO_TARGET_DIR`, not a committed `.cargo/config.toml`**
+- What: Documented the env var rather than committing a `[build] target-dir` override.
+- Why: A committed target-dir would force everyone onto one machine-specific path. The env var is per-user/per-session.
+
+### Files Created / Modified
+- `Cargo.toml` — `[profile.release]`: `debug = true` → `debug = false`, added `strip = true`.
+- `README.md` — reframed the disk requirement as build scratch (not the distributable); rewrote the **Reducing build disk usage** section.
+- `CLAUDE.md` — build-footprint note under the checks block.
+- `SESSION_LOG.md` — this entry.
+
+### Blockers / Issues
+- Outstanding: no full `pnpm tauri:build` run in this environment (no GUI, sidecar binaries gitignored), so the exact size reduction from the profile change is **unmeasured** — confirm on a real Mac.
+- Outstanding (carried from before): the YouTube feature still has no live end-to-end dogfood run, and Phase 3 (notification "Copy link" action button) is not started.
+
+### Next Session Should
+- [ ] On a Mac, run `pnpm cap-setup` then `CARGO_TARGET_DIR=/Volumes/<HDD>/cap-target pnpm tauri:build`; confirm the DMG builds and note the size delta.
+- [ ] (Optional) Fold the external-HDD recipe + the native-deps nuance into `README.md` (offered to the user, decision pending).
+- [ ] Resume Phase 3: notification "Copy link" action button.
+- [ ] Dogfood the YouTube flow live against a real Google project.
+
+### Notes
+- **`CARGO_TARGET_DIR` moves only the compiler scratch.** Native deps (ffmpeg, onnxruntime, macOS `Spacedrive.framework`) are hardcoded to the *in-repo* `target/` via `scripts/setup.js` (`const targetDir = path.join(__root, "target")`, line 17) and `tauri.conf.json` (line 81). They're small and stay on the internal disk — which is why redirecting scratch to an external drive works without breaking the bundle.
+- **External build disk must be APFS or HFS+.** exFAT/FAT32/NTFS lack symlinks, Unix permissions, and case sensitivity the Rust build needs — it will fail with confusing linker/permission errors.
+- macOS: `caffeinate -s` in a spare terminal keeps a spinning HDD from sleeping mid-build.
 
 ---
 
