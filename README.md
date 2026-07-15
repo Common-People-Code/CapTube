@@ -156,17 +156,36 @@ Database commands:
 
 The desktop build is disk-hungry. If a build fails with a "no space left on device" error, the culprit is almost always the Rust `target/` scratch directory, not the recording pipeline — and *not* the shipped app, which is a few hundred MB. The release profile in `Cargo.toml` already omits debuginfo (`debug = false`) and strips symbols (`strip = true`) to keep both the build footprint and the distributable small. If space is still tight, these levers help, most effective first:
 
-1. **Move `target/` to a larger volume.** The most reliable fix — nothing has to fit on your boot drive:
-
-   ```bash
-   export CARGO_TARGET_DIR=/Volumes/your-big-disk/cap-target
-   ```
+1. **Move `target/` to a larger volume** (e.g. an external drive) via `CARGO_TARGET_DIR`. The most reliable fix — nothing has to fit on your boot drive. See [Building against an external drive](#building-against-an-external-drive-macos) below for the full walkthrough and caveats.
 
 2. **Prefer a debug build while iterating.** `pnpm dev:desktop` compiles the Rust without LTO — reach for `pnpm tauri:build` (the LTO release that produces the DMG/installer) only when you actually need a bundle.
 
 3. **`cargo clean` after a failed run.** A half-finished `target/` left behind by an out-of-disk failure can hold several GB of dead intermediates that a fresh build won't reuse.
 
 A full release build still needs meaningfully more than the free space a partial one consumed — plan for the full ~25–30 GB rather than topping up a few gigabytes at a time.
+
+#### Building against an external drive (macOS)
+
+`CARGO_TARGET_DIR` redirects only the multi-gigabyte compiler scratch. The small native dependencies (ffmpeg, ONNX Runtime, the macOS `Spacedrive.framework`) are always written to and read from the **in-repo `target/`** — `scripts/setup.js` and `apps/desktop/src-tauri/tauri.conf.json` hardcode that path and ignore `CARGO_TARGET_DIR`. That works in your favour: the big scratch goes to the external drive while the small native-deps stay on your fast internal disk, and the bundler still finds them.
+
+1. **Format check (do this first).** The external drive must be **APFS** or **Mac OS Extended (HFS+)**. An **exFAT/FAT32/NTFS** drive will break the build with confusing linker/permission errors — those filesystems lack symlinks, Unix permissions, and the case sensitivity the build relies on. Check in Disk Utility; if it's exFAT, reformat an APFS partition (this erases it) or create an APFS disk image on the drive.
+
+2. **Run setup normally** so native-deps land in the in-repo `target/` on your internal disk:
+
+   ```bash
+   pnpm cap-setup
+   ```
+
+3. **Build with the scratch redirected to the drive.** Scoped to a single command:
+
+   ```bash
+   ls /Volumes    # confirm the mount name
+   CARGO_TARGET_DIR=/Volumes/YourDrive/cap-target pnpm tauri:build
+   ```
+
+   The compiled artifacts and the finished bundle land under `/Volumes/YourDrive/cap-target/release/bundle/`; copy the DMG off when it's done. To build repeatedly, `export CARGO_TARGET_DIR=…` for the whole shell session instead — but avoid putting it in `~/.zshrc`, or *every* Rust project on your machine will build to that drive.
+
+4. **Keep a spinning drive awake.** A release build is long; if the drive sleeps or is unplugged mid-build it dies. Run `caffeinate -s` in a spare terminal and leave the drive connected. Expect a slower build than an SSD — the workload is mostly CPU/RAM-bound, so it's wall-clock cost, not a blocker.
 
 ## Repository Map
 
