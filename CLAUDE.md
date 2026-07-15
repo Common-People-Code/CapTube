@@ -29,6 +29,8 @@ The defining constraint: the YouTube feature is **fully self-contained** — it 
 **Rust checks:** `cargo fmt --all` + `cargo check -p cap-desktop` / `cargo check -p cap-project`
 **TS checks:** `pnpm exec biome check --write <files>`; `cd apps/desktop && pnpm exec tsc --noEmit`
 
+**Build footprint:** A full desktop build's `target/` is 20–40 GB — builds fail with a disk-full error on a nearly-full drive. Low-disk levers (move `CARGO_TARGET_DIR`, `CARGO_PROFILE_RELEASE_DEBUG=false`, prefer debug builds) are documented under **Reducing build disk usage** in `README.md`.
+
 ---
 
 ## Project Structure (YouTube feature)

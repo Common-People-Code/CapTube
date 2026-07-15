@@ -120,6 +120,7 @@ Requirements:
 - pnpm 10.5.2
 - Rust 1.88 or newer
 - Docker for MySQL, MinIO, and local services
+- **~40 GB of free disk.** This is a large Rust workspace (46 crates plus the Tauri desktop app and a heavy dependency tree — ffmpeg, wgpu, the AVFoundation stack). A full desktop build's `target/` directory realistically lands in the 20–40 GB range, so a build can fail partway with a disk-full error on a nearly-full drive. See [Reducing build disk usage](#reducing-build-disk-usage) if space is tight.
 
 Install and set up the repo:
 
@@ -150,6 +151,28 @@ Database commands:
 | `pnpm db:generate` | Generate database artifacts |
 | `pnpm db:push` | Push schema changes |
 | `pnpm db:studio` | Open Drizzle Studio |
+
+### Reducing build disk usage
+
+The desktop build is disk-hungry. If a build fails with a "no space left on device" error, the culprit is almost always the Rust `target/` directory, not the recording pipeline. Levers, most effective first:
+
+1. **Move `target/` to a larger volume.** The most reliable fix — nothing has to fit on your boot drive:
+
+   ```bash
+   export CARGO_TARGET_DIR=/Volumes/your-big-disk/cap-target
+   ```
+
+2. **Drop release debuginfo for local builds.** `[profile.release]` sets `debug = true` for crash symbolication; the debuginfo is often 30–50% of `target/` size on an LTO build. Override it locally without editing the shared profile (keeps CI/symbolication unchanged):
+
+   ```bash
+   export CARGO_PROFILE_RELEASE_DEBUG=false
+   ```
+
+3. **Prefer a debug build while iterating.** `pnpm dev:desktop` compiles the Rust in debug mode (leaner debuginfo, no LTO) — reach for `pnpm tauri:build` only when you actually need a release bundle.
+
+4. **`cargo clean` after a failed run.** A half-finished `target/` left behind by an out-of-disk failure can hold several GB of dead intermediates that a fresh build won't reuse.
+
+A full build still needs meaningfully more than the free space a partial one consumed — plan for ~40 GB rather than topping up a few gigabytes at a time.
 
 ## Repository Map
 
