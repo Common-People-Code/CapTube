@@ -18,7 +18,8 @@ Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEM
 - Found the real waste: `[profile.release]` carried `debug = true`, baking full debuginfo into every shipped binary (main app + `cap-muxer`/`cap-exporter`/`cap-cli` sidecars). Tauri doesn't strip by default, so it bloated both `target/` and the DMG.
 - **Shrunk release builds and the distributable**: set `debug = false` + `strip = true` on `[profile.release]`; kept `lto`/`opt-level = "s"`/`codegen-units = 1` (those keep the binary small — only the debuginfo was dead weight). `cargo verify-project` passes.
 - Documented the build footprint and low-disk build path (relocating `target/` via `CARGO_TARGET_DIR`, e.g. to an external HDD) in `README.md` + `CLAUDE.md`.
-- Opened **draft PR #2** on branch `claude/project-status-disk-space-6neui5` (branched fresh off `main` after PR #1 merged). Commits `95ee344` (docs) and `499a05f` (profile + docs).
+- Opened **PR #2** on branch `claude/project-status-disk-space-6neui5` (branched fresh off `main` after PR #1 merged; commits `95ee344` docs + `499a05f` profile+docs) — now **merged** into `main` at `0e800ff`.
+- Follow-up on the same branch (rebased onto merged `main`): added the full **external-drive build walkthrough** to `README.md` (format check, `pnpm cap-setup`, `CARGO_TARGET_DIR` build, keep-awake) plus the native-deps-stay-in-repo nuance. Pushed as a **new PR** since PR #2 is closed/merged.
 
 ### Technical Decisions Made
 
@@ -33,7 +34,7 @@ Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEM
 
 ### Files Created / Modified
 - `Cargo.toml` — `[profile.release]`: `debug = true` → `debug = false`, added `strip = true`.
-- `README.md` — reframed the disk requirement as build scratch (not the distributable); rewrote the **Reducing build disk usage** section.
+- `README.md` — reframed the disk requirement as build scratch (not the distributable); rewrote the **Reducing build disk usage** section; added the **Building against an external drive (macOS)** subsection.
 - `CLAUDE.md` — build-footprint note under the checks block.
 - `SESSION_LOG.md` — this entry.
 
@@ -43,7 +44,7 @@ Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEM
 
 ### Next Session Should
 - [ ] On a Mac, run `pnpm cap-setup` then `CARGO_TARGET_DIR=/Volumes/<HDD>/cap-target pnpm tauri:build`; confirm the DMG builds and note the size delta.
-- [ ] (Optional) Fold the external-HDD recipe + the native-deps nuance into `README.md` (offered to the user, decision pending).
+- [x] Fold the external-HDD recipe + the native-deps nuance into `README.md` — done (new PR).
 - [ ] Resume Phase 3: notification "Copy link" action button.
 - [ ] Dogfood the YouTube flow live against a real Google project.
 
