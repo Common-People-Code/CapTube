@@ -120,6 +120,7 @@ Requirements:
 - pnpm 10.5.2
 - Rust 1.88 or newer
 - Docker for MySQL, MinIO, and local services
+- **macOS desktop builds also need the full Xcode and `cmake`** (not just the Command Line Tools) — see [Building a distributable (macOS)](#building-a-distributable-macos). Without them the Rust build fails partway on `cidre` (needs `xcodebuild`) or `whisper-rs-sys` (needs `cmake`).
 - **A good chunk of free disk (plan for ~25–30 GB).** This is a large Rust workspace (46 crates plus the Tauri desktop app and a heavy dependency tree — ffmpeg, wgpu, the AVFoundation stack), so a full desktop build's `target/` scratch directory is many gigabytes and a build can fail partway with a disk-full error on a nearly-full drive. Note this is **build scratch, not the distributable** — the shipped DMG/installer is a few hundred MB. See [Reducing build disk usage](#reducing-build-disk-usage) if space is tight.
 
 Install and set up the repo:
@@ -186,6 +187,63 @@ A full release build still needs meaningfully more than the free space a partial
    The compiled artifacts and the finished bundle land under `/Volumes/YourDrive/cap-target/release/bundle/`; copy the DMG off when it's done. To build repeatedly, `export CARGO_TARGET_DIR=…` for the whole shell session instead — but avoid putting it in `~/.zshrc`, or *every* Rust project on your machine will build to that drive.
 
 4. **Keep a spinning drive awake.** A release build is long; if the drive sleeps or is unplugged mid-build it dies. Run `caffeinate -s` in a spare terminal and leave the drive connected. Expect a slower build than an SSD — the workload is mostly CPU/RAM-bound, so it's wall-clock cost, not a blocker.
+
+## Building a distributable (macOS)
+
+`pnpm tauri:build` compiles the release binaries, bundles the sidecars, and produces a `.dmg` + `.app`. Beyond the base requirements above, a macOS build needs two native toolchain pieces that the Command Line Tools alone don't provide:
+
+1. **Full Xcode** (not just Command Line Tools). The `cidre` crate's build script calls `xcodebuild`; with only CLT the build fails with *"tool 'xcodebuild' requires Xcode"*. Install Xcode from the App Store, then point the active developer directory at it:
+
+   ```bash
+   sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+   sudo xcodebuild -runFirstLaunch
+   sudo xcodebuild -license accept
+   xcode-select -p        # should print /Applications/Xcode.app/Contents/Developer
+   ```
+
+   Xcode is a ~15 GB download (~40 GB+ installed), so budget for it *on top of* the build scratch — a good reason to relocate `target/` (see above) if internal space is tight.
+
+2. **`cmake`.** The `whisper-rs-sys` crate (transcription, via whisper.cpp) builds C++ with CMake; without it the build fails with *"is `cmake` not installed?"*. Install it with [Homebrew](https://brew.sh):
+
+   ```bash
+   brew install cmake
+   ```
+
+Then build:
+
+```bash
+pnpm tauri:build
+# or relocate scratch + keep an external drive awake:
+caffeinate -s CARGO_TARGET_DIR=/Volumes/YourDrive/cap-target pnpm tauri:build
+```
+
+Output lands under your target dir:
+
+```
+target/release/bundle/dmg/*.dmg      # the installer
+target/release/bundle/macos/*.app    # the raw app
+```
+
+### The updater signing key
+
+`apps/desktop/src-tauri/tauri.conf.json` sets `createUpdaterArtifacts: true` and ships an updater **public** key. After the `.dmg`/`.app` are built, the bundler tries to sign the updater artifact and — with no private key — exits non-zero with *"A public key has been found, but no private key. Make sure to set `TAURI_SIGNING_PRIVATE_KEY`."* **This does not affect the `.dmg`/`.app`, which are already complete.** To make the build exit cleanly, either:
+
+- generate a signing key and export it before building:
+
+  ```bash
+  pnpm --dir apps/desktop exec tauri signer generate
+  export TAURI_SIGNING_PRIVATE_KEY=…      # and TAURI_SIGNING_PRIVATE_KEY_PASSWORD if you set one
+  ```
+
+- or set `createUpdaterArtifacts` to `false` locally if you don't need the auto-updater (don't commit that change).
+
+### Unsigned builds
+
+Builds produced this way are not Apple code-signed or notarized, so Gatekeeper blocks them on first launch. Right-click the app → **Open**, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Cap - Development.app"
+```
 
 ## Repository Map
 
