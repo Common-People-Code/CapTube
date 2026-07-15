@@ -29,6 +29,8 @@ The defining constraint: the YouTube feature is **fully self-contained** — it 
 **Rust checks:** `cargo fmt --all` + `cargo check -p cap-desktop` / `cargo check -p cap-project`
 **TS checks:** `pnpm exec biome check --write <files>`; `cd apps/desktop && pnpm exec tsc --noEmit`
 
+**Build footprint:** A full desktop build's `target/` scratch is many GB (plan ~25–30 GB) — builds can fail with a disk-full error on a nearly-full drive. This is scratch, not the distributable (the DMG is a few hundred MB). The release profile omits debuginfo (`debug = false`) and strips symbols to keep both small; further low-disk levers (move `CARGO_TARGET_DIR`, prefer debug builds) are under **Reducing build disk usage** in `README.md`.
+
 ---
 
 ## Project Structure (YouTube feature)
