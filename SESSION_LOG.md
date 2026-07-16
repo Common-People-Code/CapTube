@@ -2,12 +2,56 @@
 
 Development history for the CapTube YouTube-upload feature. See `SESSION_LOG_TEMPLATE.md` for the entry format, and `CLAUDE.md` for current status.
 
-**Current Phase:** Phase 3 — Notification action button
-**Sessions completed:** 3
+**Current Phase:** Phase 3 — Live dogfood (first real run surfaced a blank-screen bug on the YouTube settings page)
+**Sessions completed:** 4
 
 ---
 
 *Add new entries above this line*
+
+---
+
+## Session 4 — 2026-07-16
+
+### What We Accomplished
+- **First real build of the app** (Apple Silicon Mac). Reached a working `.dmg`/`.app` after clearing a chain of undocumented environment prerequisites — this is the first time the desktop app (and the YouTube feature) has ever run.
+- **Documented the macOS distributable build** — PR #4 (merged): full Xcode + cmake/Homebrew prerequisites, the `CARGO_TARGET_DIR` external-drive recipe, output paths, the updater signing-key behaviour, and the unsigned/quarantine step.
+- **Set up an independent private repo** — GitHub forbids making a fork private, so created a standalone (non-fork) `Common-People-Code/CapTube-private`, pushed `main` into it, and synced it to the fork (now at `9ceabe1` with PRs #2/#3/#4).
+- **Prepared the release path** — a `gh release create v0.5.6-captube` command (DMG attached, draft/prerelease) is ready but **on hold** pending the bug below.
+- **Surfaced the first real bug** (see Blockers): the YouTube Integration settings page renders a blank screen on first run.
+
+### Technical Decisions Made
+
+**Reuse the existing build tree instead of re-cloning for the private repo**
+- What: Point the existing clone's `origin` at `CapTube-private` rather than a fresh clone.
+- Why: The clone holds the ~30–40 GB build cache (target/, sidecars, native-deps); re-cloning forces a full rebuild. The "new session" is just a new Claude context opened on the same folder.
+
+**Standalone private repo, not a private fork**
+- What: `gh repo create Common-People-Code/CapTube-private --private`, then `git push origin fork/main:main`.
+- Why: GitHub blocks changing a fork's visibility. A non-fork repo can be private. Note the AGPLv3 obligation: distributing the binary means offering recipients the (modified) source — private repo controls access, not licensing.
+
+### Files Created / Modified
+- `README.md` — NEW "Building a distributable (macOS)" section + Requirements note (PR #4, merged to both repos).
+- `Cargo.toml` (`apps/desktop/src-tauri`) — **uncommitted local edit** adding `"devtools"` to the `tauri` features, for diagnosing the bug below. Not to be committed to a release build.
+- `SESSION_LOG.md` — this entry.
+
+### Blockers / Issues
+- **OPEN — YouTube settings page blank screen (top priority).** On the release build, Settings → Integrations → YouTube renders blank. `CapErrorBoundary` is **not** catching it (no error screen / no "Copy Error" button), so the exception is escaping to the webview's global handler. Ruled out: missing `QueryClientProvider`, `useMutation`, the shared imports, `ToggleSettingItem`, and `youtube_get_status` (registered; returns defaults on a fresh store). The crash is runtime-only and unique to this page — it never showed before because the feature had only ever been compile/lint-verified.
+  - **Next step:** with `"devtools"` added to the `tauri` features, rebuild, open the page, and capture the first red **Console** error + stack. That error unblocks the fix.
+- Release is on hold until the page works.
+- `CapTube-private` local `main` may be behind on the user's machine — `git fetch origin && git merge --ff-only origin/main` before continuing.
+
+### Next Session Should
+- [ ] Open a fresh context on the local `CapTube-private` folder; grab the devtools Console error from the YouTube settings page and fix the blank-screen crash.
+- [ ] Rebuild, confirm the full connect → channel-pick → upload flow works end to end (the still-pending live dogfood).
+- [ ] Revert the local `"devtools"` Cargo.toml edit before cutting a release.
+- [ ] Cut the release (`gh release create v0.5.6-captube …`) off a build with a working YouTube page.
+- [ ] Resume Phase 3: the notification "Copy link" action button.
+
+### Notes
+- The app currently bundles as **"Cap - Development" v0.5.6** (upstream version + dev-flavored productName) — worth renaming to CapTube before wider sharing.
+- Build prerequisites that CLT alone doesn't satisfy: full Xcode (`cidre` → `xcodebuild`), `cmake` via Homebrew (`whisper-rs-sys`). Now documented in the README.
+- `CARGO_TARGET_DIR` relocates only compiler scratch; native-deps stay in the in-repo `target/`, so an external-drive build works.
 
 ---
 
