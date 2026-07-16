@@ -97,7 +97,7 @@ jobs:
   clippy:
     name: Clippy
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' && (contains(github.event.pull_request.labels.*.name, 'ci-desktop') || github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -166,7 +166,7 @@ jobs:
   build-desktop:
     name: Build Desktop
     needs: changes
-    if: needs.changes.outputs.desktop == 'true'
+    if: needs.changes.outputs.desktop == 'true' && (contains(github.event.pull_request.labels.*.name, 'ci-desktop') || github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -248,8 +248,7 @@ jobs:
 
   rust-cache:
     name: Rust cache
-    needs: changes
-    if: needs.changes.outputs.branch == 'main'
+    if: github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
